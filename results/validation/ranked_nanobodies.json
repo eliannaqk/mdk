@@ -1,0 +1,82 @@
+[
+  {
+    "id": "nb_design_3",
+    "final_score": 68.64,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASFKVRVNWFVLPKQQNDNWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "medium",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_7",
+    "final_score": 68.58,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASESLTFVEGRNANNSQPQFEGPWYGWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "medium",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_8",
+    "final_score": 67.65,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASIYICVHPNYVWNKALCTWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_2",
+    "final_score": 67.03,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASIDFYRGQPLPQVPEDGEFLNWFHCWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_1",
+    "final_score": 66.63,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASHPKTACEYGYIGCCNLARMRCMNIWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_5",
+    "final_score": 65.43,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASENMVWTIQYDSDSRCHCMCMSWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_6",
+    "final_score": 65.21,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASRLVTKWMHHIWVRHTGWQYTPGWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_4",
+    "final_score": 64.29,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASMHQKAPWQKMVQGECGLLWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_10",
+    "final_score": 64.06,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASRCWAMTCWWIGTMHCSIDLWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  },
+  {
+    "id": "nb_design_9",
+    "final_score": 62.49,
+    "sequence": "QVQLVESGGGLVQPGGSLRLSCAASSPDRAAFWIDARVHFFCMIIKWVRQAPGKGLEWVSISRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARWGQGTLVTVSS",
+    "developability_risk": "medium",
+    "expression_level": "low",
+    "production_cost": "medium"
+  }
+]

@@ -1,0 +1,66 @@
+============================================================
+LRP1 Binding Epitope Definition
+============================================================
+
+1. Analyzing MDK structure: data/structures/1mkc.pdb
+
+2. Identifying LRP1 binding epitope...
+  Found 5 basic surface residues
+  Clustered into 3 patches
+
+3. Expanding epitope definition...
+  Core epitope: 5 residues
+  Expanded epitope: 31 residues
+
+4. Saving epitope definition...
+  Saved epitope definition to: data/epitopes/lrp1_patch.json
+
+5. Creating visualization...
+  Created PyMOL visualization script: results/visualizations/lrp1_epitope.pml
+
+============================================================
+Epitope Definition Summary
+============================================================
+
+LRP1 Binding Epitope:
+  Core residues: [86, 87, 89, 99, 102]
+  Total epitope size: 31 residues
+  Estimated surface area: ~1550 Ų
+
+Key basic residues for LRP1 binding:
+  - LYS86
+  - LYS87
+  - ARG89
+  - ARG99
+  - LYS102
+
+Output files:
+  - Epitope definition: data/epitopes/lrp1_patch.json
+  - PyMOL script: results/visualizations/lrp1_epitope.pml
+
+Next step: Run 04_run_bindcraft.py to design binders
+Available GPUs:
+NVIDIA H2001: gpu
+Traceback (most recent call last):
+  File "/home/eqk3/apps/BindCraft/bindcraft.py", line 27, in <module>
+    target_settings, advanced_settings, filters = load_json_settings(settings_path, filters_path, advanced_path)
+  File "/home/eqk3/apps/BindCraft/functions/generic_utils.py", line 260, in load_json_settings
+    with open(settings_json, 'r') as file:
+FileNotFoundError: [Errno 2] No such file or directory: 'results/bindcraft/20250922-173418/settings.generated.json'
+
+============================================================
+Running BindCraft (real pipeline)
+============================================================
+
+Running BindCraft pipeline:
+python bindcraft.py --settings results/bindcraft/20250922-173418/settings.generated.json --filters /home/eqk3/apps/BindCraft/settings_filters/default_filters.json --advanced /home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json
+Traceback (most recent call last):
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 242, in <module>
+    main()
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 225, in main
+    design_path = invoke_bindcraft(settings_path)
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 93, in invoke_bindcraft
+    subprocess.run(cmd, cwd=str(BINDCRAFT_ROOT), env=env, check=True)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'bindcraft.py', '--settings', 'results/bindcraft/20250922-173418/settings.generated.json', '--filters', '/home/eqk3/apps/BindCraft/settings_filters/default_filters.json', '--advanced', '/home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json']' returned non-zero exit status 1.

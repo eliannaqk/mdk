@@ -1,0 +1,242 @@
+[
+  {
+    "rank": 1,
+    "design_id": "design_1",
+    "sequence_length": 72,
+    "scores": {
+      "plddt": 85.99914117024211,
+      "iptm": 0.8934779857710768,
+      "pae": 4.340012613700793,
+      "interface_area": 1120.243430176217
+    },
+    "composite_score": 0.886455200394485
+  },
+  {
+    "rank": 2,
+    "design_id": "design_2",
+    "sequence_length": 71,
+    "scores": {
+      "plddt": 93.2251332572225,
+      "iptm": 0.8319037321514144,
+      "pae": 4.730390219234768,
+      "interface_area": 943.7119308310807
+    },
+    "composite_score": 0.8752721509204429
+  },
+  {
+    "rank": 3,
+    "design_id": "design_3",
+    "sequence_length": 50,
+    "scores": {
+      "plddt": 92.32913387241251,
+      "iptm": 0.8541752295141096,
+      "pae": 3.058642880634099,
+      "interface_area": 738.789627407996
+    },
+    "composite_score": 0.8721455036261204
+  },
+  {
+    "rank": 4,
+    "design_id": "design_4",
+    "sequence_length": 54,
+    "scores": {
+      "plddt": 91.45692670447879,
+      "iptm": 0.7991713812791197,
+      "pae": 3.6846648671585505,
+      "interface_area": 1173.880175643545
+    },
+    "composite_score": 0.8694749001773606
+  },
+  {
+    "rank": 5,
+    "design_id": "design_5",
+    "sequence_length": 63,
+    "scores": {
+      "plddt": 83.37112806278077,
+      "iptm": 0.8839041598350451,
+      "pae": 6.616498450437923,
+      "interface_area": 878.387617755058
+    },
+    "composite_score": 0.8474038202282801
+  },
+  {
+    "rank": 6,
+    "design_id": "design_6",
+    "sequence_length": 65,
+    "scores": {
+      "plddt": 90.71087139924055,
+      "iptm": 0.8251610502627028,
+      "pae": 6.70030874565046,
+      "interface_area": 806.3669235400532
+    },
+    "composite_score": 0.8381650016858049
+  },
+  {
+    "rank": 7,
+    "design_id": "design_7",
+    "sequence_length": 71,
+    "scores": {
+      "plddt": 93.8723190762071,
+      "iptm": 0.8467701187513452,
+      "pae": 8.047967961528775,
+      "interface_area": 704.6393474072215
+    },
+    "composite_score": 0.8371358197263563
+  },
+  {
+    "rank": 8,
+    "design_id": "design_8",
+    "sequence_length": 50,
+    "scores": {
+      "plddt": 88.94752172600384,
+      "iptm": 0.8686151921625354,
+      "pae": 6.044962017057511,
+      "interface_area": 607.5833181926982
+    },
+    "composite_score": 0.8347472270819122
+  },
+  {
+    "rank": 9,
+    "design_id": "design_9",
+    "sequence_length": 62,
+    "scores": {
+      "plddt": 89.50814623364938,
+      "iptm": 0.7389471194479932,
+      "pae": 5.7694586749023955,
+      "interface_area": 1129.5664774584668
+    },
+    "composite_score": 0.8256402286474628
+  },
+  {
+    "rank": 10,
+    "design_id": "design_10",
+    "sequence_length": 57,
+    "scores": {
+      "plddt": 82.10062314860653,
+      "iptm": 0.8715772503733454,
+      "pae": 9.668146413369495,
+      "interface_area": 941.8148303584131
+    },
+    "composite_score": 0.8246599432085358
+  },
+  {
+    "rank": 11,
+    "design_id": "design_11",
+    "sequence_length": 52,
+    "scores": {
+      "plddt": 94.9632209767727,
+      "iptm": 0.7479832147318278,
+      "pae": 7.92350458128918,
+      "interface_area": 931.6912132758353
+    },
+    "composite_score": 0.8244287062753717
+  },
+  {
+    "rank": 12,
+    "design_id": "design_12",
+    "sequence_length": 55,
+    "scores": {
+      "plddt": 93.18527984044941,
+      "iptm": 0.7132264124293571,
+      "pae": 6.379017638883366,
+      "interface_area": 1071.6305067211651
+    },
+    "composite_score": 0.8223196202338686
+  },
+  {
+    "rank": 13,
+    "design_id": "design_13",
+    "sequence_length": 66,
+    "scores": {
+      "plddt": 91.47887739256596,
+      "iptm": 0.7565788324884132,
+      "pae": 7.473551023786009,
+      "interface_area": 935.4198305080832
+    },
+    "composite_score": 0.8207864747319648
+  },
+  {
+    "rank": 14,
+    "design_id": "design_14",
+    "sequence_length": 79,
+    "scores": {
+      "plddt": 92.50129933119408,
+      "iptm": 0.7536886279380656,
+      "pae": 9.117550496573752,
+      "interface_area": 1194.021679760332
+    },
+    "composite_score": 0.81819567919165
+  },
+  {
+    "rank": 15,
+    "design_id": "design_15",
+    "sequence_length": 56,
+    "scores": {
+      "plddt": 80.43689187664634,
+      "iptm": 0.7746045379328352,
+      "pae": 4.97320357732916,
+      "interface_area": 1009.6491523601488
+    },
+    "composite_score": 0.8179978002875454
+  },
+  {
+    "rank": 16,
+    "design_id": "design_16",
+    "sequence_length": 72,
+    "scores": {
+      "plddt": 80.89390364251132,
+      "iptm": 0.8460599245574651,
+      "pae": 9.704230965788165,
+      "interface_area": 927.351324946165
+    },
+    "composite_score": 0.8091459401398822
+  },
+  {
+    "rank": 17,
+    "design_id": "design_17",
+    "sequence_length": 71,
+    "scores": {
+      "plddt": 83.45946272899843,
+      "iptm": 0.8320158696513911,
+      "pae": 6.847929803882712,
+      "interface_area": 700.7818702806221
+    },
+    "composite_score": 0.8076100577163958
+  },
+  {
+    "rank": 18,
+    "design_id": "design_18",
+    "sequence_length": 72,
+    "scores": {
+      "plddt": 92.52117701285012,
+      "iptm": 0.7602720415068246,
+      "pae": 7.231916052668677,
+      "interface_area": 668.2149447416176
+    },
+    "composite_score": 0.8002810684309841
+  },
+  {
+    "rank": 19,
+    "design_id": "design_19",
+    "sequence_length": 79,
+    "scores": {
+      "plddt": 80.59355585482436,
+      "iptm": 0.769706835920108,
+      "pae": 7.435261738331227,
+      "interface_area": 1103.8095339636466
+    },
+    "composite_score": 0.8000949903436415
+  },
+  {
+    "rank": 20,
+    "design_id": "design_20",
+    "sequence_length": 76,
+    "scores": {
+      "plddt": 83.74674742336182,
+      "iptm": 0.7123042713527329,
+      "pae": 5.560311743116763,
+      "interface_area": 1138.0044107758818
+    },
+    "composite_score": 0.7990932058570668
+  }
+]

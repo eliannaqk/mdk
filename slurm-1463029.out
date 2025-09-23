@@ -1,0 +1,101 @@
+============================================================
+LRP1 Binding Epitope Definition
+============================================================
+
+1. Analyzing MDK structure: data/structures/1mkc.pdb
+
+2. Identifying LRP1 binding epitope...
+  Found 5 basic surface residues
+  Clustered into 3 patches
+
+3. Expanding epitope definition...
+  Core epitope: 5 residues
+  Expanded epitope: 31 residues
+
+4. Saving epitope definition...
+  Saved epitope definition to: data/epitopes/lrp1_patch.json
+
+5. Creating visualization...
+  Created PyMOL visualization script: results/visualizations/lrp1_epitope.pml
+
+============================================================
+Epitope Definition Summary
+============================================================
+
+LRP1 Binding Epitope:
+  Core residues: [86, 87, 89, 99, 102]
+  Total epitope size: 31 residues
+  Estimated surface area: ~1550 Ų
+
+Key basic residues for LRP1 binding:
+  - LYS86
+  - LYS87
+  - ARG89
+  - ARG99
+  - LYS102
+
+Output files:
+  - Epitope definition: data/epitopes/lrp1_patch.json
+  - PyMOL script: results/visualizations/lrp1_epitope.pml
+
+Next step: Run 04_run_bindcraft.py to design binders
+Available GPUs:
+NVIDIA H2001: gpu
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                  PyRosetta-4                                  │
+│               Created in JHU by Sergey Lyskov and PyRosetta Team              │
+│               (C) Copyright Rosetta Commons Member Institutions               │
+│                                                                               │
+│ NOTE: USE OF PyRosetta FOR COMMERCIAL PURPOSES REQUIRES PURCHASE OF A LICENSE │
+│          See LICENSE.PyRosetta.md or email license@uw.edu for details         │
+└───────────────────────────────────────────────────────────────────────────────┘
+PyRosetta-4 2025 [Rosetta PyRosetta4.Release.python39.ubuntu 2025.37+release.df75a9c48e763e52a7aa3f5dfba077f4da88dbf5 2025-09-03T12:23:30] retrieved from: http://www.pyrosetta.org
+Running binder design for target settings
+Design settings used: default_4stage_multimer
+Filtering designs based on default_filters
+Starting trajectory: MDK_human_l59_s386942
+jax.errors.SimplifiedTraceback: For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/eqk3/apps/BindCraft/bindcraft.py", line 109, in <module>
+    trajectory = binder_hallucination(design_name, target_settings["starting_pdb"], target_settings["chains"],
+  File "/home/eqk3/apps/BindCraft/functions/colabdesign_utils.py", line 28, in binder_hallucination
+    af_model = mk_afdesign_model(protocol="binder", debug=False, data_dir=advanced_settings["af_params_dir"], 
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/model.py", line 120, in __init__
+    params = data.get_model_haiku_params(model_name=model_name, data_dir=data_dir, fuse=True)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/alphafold/model/data.py", line 41, in get_model_haiku_params
+    return utils.flat_params_to_haiku(params, fuse=fuse)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/alphafold/model/utils.py", line 95, in flat_params_to_haiku
+    P[scope][name] = jnp.array(array)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/numpy/lax_numpy.py", line 3214, in array
+    out_array: Array = lax_internal._convert_element_type(
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/lax/lax.py", line 559, in _convert_element_type
+    return convert_element_type_p.bind(operand, new_dtype=new_dtype,
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/core.py", line 416, in bind
+    return self.bind_with_trace(find_top_trace(args), args, params)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/core.py", line 420, in bind_with_trace
+    out = trace.process_primitive(self, map(trace.full_raise, args), params)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/core.py", line 921, in process_primitive
+    return primitive.impl(*tracers, **params)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/dispatch.py", line 87, in apply_primitive
+    outs = fun(*args)
+jaxlib.xla_extension.XlaRuntimeError: NOT_FOUND: Couldn't find a suitable version of ptxas. The following locations were considered: ./cuda_sdk_lib/bin/ptxas, /apps/software/2022b/software/nodejs/18.12.1-GCCcore-12.2.0/bin/ptxas, /apps/software/2022b/software/OpenSSL/1.1/bin/ptxas, /apps/software/2022b/software/ICU/72.1-GCCcore-12.2.0/sbin/ptxas, /apps/software/2022b/software/ICU/72.1-GCCcore-12.2.0/bin/ptxas, /apps/software/2022b/software/GCCcore/12.2.0/bin/ptxas, /home/eqk3/.local/bin/ptxas, /opt/lenovo/onecli/ptxas, /home/eqk3/project_pi_mg269/eqk3/.tmp/.tmpzxZ6QH/ptxas, /home/eqk3/.local/lib/node_modules/@openai/codex/node_modules/@vscode/ripgrep/bin/ptxas, /home/eqk3/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/bin/remote-cli/ptxas, /home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/bin/ptxas, /home/eqk3/miniconda3/condabin/ptxas, /home/eqk3/bin/ptxas, /apps/bin/ptxas, /opt/slurm/current/bin/ptxas, /usr/local/bin/ptxas, /usr/bin/ptxas, /usr/local/sbin/ptxas, /usr/sbin/ptxas, /home/eqk3/.cursor-server/extensions/ms-python.debugpy-2025.10.0-linux-x64/bundled/scripts/noConfigScripts/ptxas, /usr/local/cuda-12.3/bin/ptxas, /usr/local/cuda/bin/ptxas, /nfs/roberts/project/pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax_plugins/xla_cuda12/../nvidia/cuda_nvcc/bin/ptxas, /nfs/roberts/project/pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax_plugins/xla_cuda12/../../nvidia/cuda_nvcc/bin/ptxas
+
+============================================================
+Running BindCraft (real pipeline)
+============================================================
+
+Running BindCraft pipeline:
+python bindcraft.py --settings /home/eqk3/MDX/results/bindcraft/20250922-174320/settings.generated.json --filters /home/eqk3/apps/BindCraft/settings_filters/default_filters.json --advanced /home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json
+Traceback (most recent call last):
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 242, in <module>
+    main()
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 225, in main
+    design_path = invoke_bindcraft(settings_path)
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 93, in invoke_bindcraft
+    subprocess.run(cmd, cwd=str(BINDCRAFT_ROOT), env=env, check=True)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'bindcraft.py', '--settings', '/home/eqk3/MDX/results/bindcraft/20250922-174320/settings.generated.json', '--filters', '/home/eqk3/apps/BindCraft/settings_filters/default_filters.json', '--advanced', '/home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json']' returned non-zero exit status 1.

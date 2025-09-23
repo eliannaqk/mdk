@@ -1,0 +1,219 @@
+# Dockerfile for MDK-LRP1 Nanobody Design Pipeline
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV CONDA_DIR=/opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    build-essential \
+    cmake \
+    curl \
+    ca-certificates \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
+    bash miniconda.sh -b -p $CONDA_DIR && \
+    rm miniconda.sh && \
+    conda clean -ay
+
+# Create working directory
+WORKDIR /workspace
+
+# Copy environment file
+COPY environment.yml .
+
+# Create conda environment
+RUN conda env create -f environment.yml && \
+    conda clean -ay
+
+# Activate environment and install additional packages
+SHELL ["conda", "run", "-n", "mdk-nanobody", "/bin/bash", "-c"]
+
+# Install JAX with CUDA support
+RUN pip install --upgrade pip && \
+    pip install jax[cuda11_cudnn86]==0.4.13 \
+    ml-collections \
+    dm-haiku \
+    optax \
+    einops
+
+# Clone and install BindCraft
+RUN git clone https://github.com/martinpacesa/BindCraft.git && \
+    cd BindCraft && \
+    pip install -e . && \
+    cd ..
+
+# Clone and install ProteinMPNN
+RUN git clone https://github.com/dauparas/ProteinMPNN.git && \
+    cd ProteinMPNN && \
+    pip install -e . && \
+    cd ..
+
+# Download AlphaFold2 parameters (optional - large files)
+# RUN mkdir -p /data/alphafold && \
+#     cd /data/alphafold && \
+#     wget https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar && \
+#     tar -xf alphafold_params_2022-12-06.tar && \
+#     rm alphafold_params_2022-12-06.tar
+
+# Copy project files
+COPY . /workspace/mdk-nanobody/
+WORKDIR /workspace/mdk-nanobody
+
+# Create necessary directories
+RUN mkdir -p data/structures data/epitopes data/templates \
+    results/designs results/nanobodies results/validation \
+    results/visualizations notebooks models
+
+# Set up entrypoint
+ENTRYPOINT ["conda", "run", "-n", "mdk-nanobody"]
+CMD ["/bin/bash"]
+
+# ============================================
+# docker-compose.yml
+# ============================================
+---
+version: '3.8'
+
+services:
+  mdk-nanobody:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mdk-nanobody:latest
+    container_name: mdk-nanobody-pipeline
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    volumes:
+      # Mount project directory
+      - .:/workspace/mdk-nanobody
+      # Mount data directory (for large files)
+      - ./data:/workspace/mdk-nanobody/data
+      # Mount results
+      - ./results:/workspace/mdk-nanobody/results
+      # Optional: Mount AlphaFold parameters
+      # - /path/to/alphafold/params:/data/alphafold
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/workspace/mdk-nanobody
+    
+    # For Jupyter notebooks
+    ports:
+      - "8888:8888"
+      - "6006:6006"  # TensorBoard
+    
+    stdin_open: true
+    tty: true
+    
+    command: >
+      bash -c "
+      echo '========================================' &&
+      echo 'MDK-LRP1 Nanobody Design Pipeline' &&
+      echo '========================================' &&
+      echo '' &&
+      echo 'Container ready!' &&
+      echo 'Run pipeline with:' &&
+      echo '  python scripts/02_download_structures.py' &&
+      echo '  python scripts/03_define_epitope.py' &&
+      echo '  python scripts/04_run_bindcraft.py' &&
+      echo '  python scripts/05_convert_to_nanobody.py' &&
+      echo '  python scripts/06_analyze_results.py' &&
+      echo '' &&
+      echo 'Or start Jupyter with:' &&
+      echo '  jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root' &&
+      echo '' &&
+      /bin/bash
+      "
+
+  # Optional: Separate PyMOL service for visualization
+  pymol:
+    image: schrodinger/pymol:latest
+    container_name: mdk-pymol
+    volumes:
+      - ./data:/data
+      - ./results:/results
+    environment:
+      - DISPLAY=$DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+    stdin_open: true
+    tty: true
+
+# ============================================
+# .dockerignore
+# ============================================
+---
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Data files (will be mounted)
+*.pdb
+*.cif
+*.h5
+*.pkl
+
+# Results (will be mounted)
+results/
+
+# Documentation
+docs/
+*.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large model files
+models/
+*.pt
+*.pth
+*.ckpt

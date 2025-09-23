@@ -1,0 +1,101 @@
+# BindCraft Configuration for MDK-LRP1 Nanobody Design
+
+target:
+  name: "MDK_human"
+  pdb_file: "data/structures/1mkc.pdb"
+  chain: "A"
+  
+epitope:
+  name: "LRP1_binding_patch"
+  # LRP1 interaction likely involves basic patches in C-domain
+  # Based on literature, focusing on conserved basic residues
+  residues:
+    - 86  # R86 - key basic residue
+    - 87  # K87
+    - 89  # R89
+    - 94  # K94
+    - 95  # R95
+    - 96  # K96
+    - 102 # K102
+    - 103 # R103
+    - 107 # K107
+  expand_radius: 5.0  # Expand epitope by 5Å around defined residues
+  
+bindcraft:
+  # AlphaFold2 settings
+  af2:
+    num_recycles: 3
+    use_templates: false
+    max_msa_depth: 32
+    
+  # BindCraft hallucination settings
+  hallucination:
+    num_designs: 100
+    binder_length_range: [50, 80]
+    loss_weights:
+      plddt: 1.0
+      pae: 1.0
+      iptm: 2.0
+      interface_area: 1.5
+    optimization:
+      learning_rate: 0.1
+      num_steps: 100
+      
+  # ProteinMPNN settings
+  mpnn:
+    num_sequences: 8
+    sampling_temperature: 0.2
+    use_tied_positions: true
+    
+  # Filtering criteria
+  filters:
+    min_plddt: 80.0
+    min_iptm: 0.7
+    min_interface_area: 600  # Å²
+    max_interface_hydrophobicity: 0.3
+    max_clash_score: 5.0
+    
+nanobody:
+  # VHH formatting options
+  scaffold_pdb: "data/templates/nanobody_template.pdb"
+  cdr_transfer_method: "structural_alignment"
+  
+  # Framework regions from standard VHH
+  framework:
+    FR1: "QVQLVESGGGLVQPGGSLRLSCAAS"
+    FR2: "WVRQAPGKGLEWVS"
+    FR3: "RFTISRDNSKNTLYLQMNSLRAEDTAVYYC"
+    FR4: "WGQGTLVTVSS"
+    
+validation:
+  # Selectivity screening
+  off_targets:
+    - name: "PTN"  # Pleiotrophin - MDK paralog
+      pdb: "1n9l"
+      max_similarity: 0.3
+      
+  # Developability metrics
+  developability:
+    target_pI: [6.5, 9.0]  # Avoid extreme pI
+    max_hydrophobic_patch: 400  # Å²
+    min_tm: 65  # °C
+    aggregation_propensity: "low"
+    
+  # Functional validation
+  functional:
+    binding_assay: "SPR"
+    cell_assay: "LRP1_signaling_inhibition"
+    competition_assay: "LRP1_MDK_competition"
+    
+output:
+  base_dir: "results"
+  save_pdbs: true
+  save_sequences: true
+  save_scores: true
+  generate_pymol_session: true
+  
+computational:
+  device: "cuda"  # or "cpu"
+  num_workers: 4
+  batch_size: 1
+  seed: 42

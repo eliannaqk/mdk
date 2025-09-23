@@ -1,0 +1,146 @@
+============================================================
+Nanobody Conversion Report
+============================================================
+
+Converted 10 designs to nanobody format
+
+Properties summary:
+  MW range: 11.1 - 12.0 kDa
+  pI range: 6.8 - 10.2
+
+Individual nanobodies:
+
+nb_design_1:
+  Original design: design_1
+  Length: 108 aa
+  MW: 11.8 kDa
+  pI: 9.2
+  CDR1: HPKTACEYGYIGCCNLARMRCMNI
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [30, 37, 38, 45]
+    - Hydrophobic patch at position 46-50: MNIWV
+    - Hydrophobic patch at position 77-81: LYLQM
+
+nb_design_2:
+  Original design: design_2
+  Length: 108 aa
+  MW: 12.0 kDa
+  pI: 6.8
+  CDR1: IDFYRGQPLPQVPEDGEFLNWFHC
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [48]
+    - Hydrophobic patch at position 42-46: FLNWF
+    - Hydrophobic patch at position 77-81: LYLQM
+
+nb_design_3:
+  Original design: design_3
+  Length: 101 aa
+  MW: 11.2 kDa
+  pI: 9.0
+  CDR1: FKVRVNWFVLPKQQNDN
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [87]
+    - Hydrophobic patch at position 29-33: VNWFV
+    - Hydrophobic patch at position 30-34: NWFVL
+    - Hydrophobic patch at position 31-35: WFVLP
+    - Hydrophobic patch at position 70-74: LYLQM
+
+nb_design_4:
+  Original design: design_4
+  Length: 102 aa
+  MW: 11.2 kDa
+  pI: 8.8
+  CDR1: MHQKAPWQKMVQGECGLL
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [39, 88]
+    - Hydrophobic patch at position 40-44: GLLWV
+    - Hydrophobic patch at position 41-45: LLWVR
+    - Hydrophobic patch at position 71-75: LYLQM
+
+nb_design_5:
+  Original design: design_5
+  Length: 105 aa
+  MW: 11.6 kDa
+  pI: 7.2
+  CDR1: ENMVWTIQYDSDSRCHCMCMS
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [39, 41, 43]
+    - Hydrophobic patch at position 27-31: MVWTI
+    - Hydrophobic patch at position 74-78: LYLQM
+
+nb_design_6:
+  Original design: design_6
+  Length: 106 aa
+  MW: 11.9 kDa
+  pI: 10.2
+  CDR1: RLVTKWMHHIWVRHTGWQYTPG
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Hydrophobic patch at position 75-79: LYLQM
+
+nb_design_7:
+  Original design: design_7
+  Length: 108 aa
+  MW: 11.8 kDa
+  pI: 7.0
+  CDR1: ESLTFVEGRNANNSQPQFEGPWYG
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - N-glycosylation sites found: [(36, 'NNS')]
+    - Hydrophobic patch at position 46-50: WYGWV
+    - Hydrophobic patch at position 77-81: LYLQM
+
+nb_design_8:
+  Original design: design_8
+  Length: 101 aa
+  MW: 11.1 kDa
+  pI: 8.8
+  CDR1: IYICVHPNYVWNKALCT
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [28, 40, 87]
+    - Hydrophobic patch at position 25-29: IYICV
+    - Hydrophobic patch at position 70-74: LYLQM
+
+nb_design_9:
+  Original design: design_9
+  Length: 105 aa
+  MW: 11.6 kDa
+  pI: 8.8
+  CDR1: SPDRAAFWIDARVHFFCMIIK
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [41]
+    - Hydrophobic patch at position 39-43: FFCMI
+    - Hydrophobic patch at position 40-44: FCMII
+    - Hydrophobic patch at position 42-46: MIIKW
+    - Hydrophobic patch at position 43-47: IIKWV
+    - Hydrophobic patch at position 74-78: LYLQM
+
+nb_design_10:
+  Original design: design_10
+  Length: 103 aa
+  MW: 11.4 kDa
+  pI: 8.2
+  CDR1: RCWAMTCWWIGTMHCSIDL
+  CDR2: IS
+  CDR3: AR
+  Notes:
+    - Warning: Unexpected cysteines at positions [26, 31, 39, 89]
+    - Hydrophobic patch at position 41-45: IDLWV
+    - Hydrophobic patch at position 72-76: LYLQM
+

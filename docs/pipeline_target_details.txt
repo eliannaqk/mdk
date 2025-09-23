@@ -1,0 +1,10 @@
+Pipeline execution notes for 03_define_epitope.py → 06_analyze_results.py
+
+- SLURM job script: slurm_run_pipeline.sbatch activates the bindcraft-af3 conda env, sets WANDB_API_KEY, and runs 03_define_epitope.py, 04_run_bindcraft.py, 05_convert_to_nanobody.py, 06_analyze_results.py, then collect_metrics.py from /home/eqk3/MDX.
+- Target structure: data/structures/1mkc.pdb (chain A) as configured in config.yaml under target.pdb_file.
+- Epitope definition: 03_define_epitope.py caches data/epitopes/lrp1_patch.json and results/visualizations/lrp1_epitope.pml for the LRP1-binding patch on the MDK C-terminal domain with a 5 Å expansion.
+- Core hotspot residues supplied to BindCraft: Lys86, Lys87, Arg89, Arg99, Lys102 (residue numbers refer to chain A of 1mkc; residue 107 is dropped because it is absent in the PDB file).
+- Expanded epitope surface (used for scoring/analysis): residues 62, 63, 64, 66, 69, 72, 78–104 inclusive (chain A), yielding 31 positions around the positively charged groove implicated in LRP1 binding.
+- Binder design goal: BindCraft hallucinations (binder length 50–80 aa) are constrained to bury the core hotspot residues on MDK to compete with LRP1; AlphaFold trajectory animations are generated via ffmpeg ≥4.3.
+- Nanobody conversion: 05_convert_to_nanobody.py grafts the highest-scoring hallucinated binders into the VHH scaffold defined in config.yaml, preserving the designed CDR contacts to the MDK epitope above.
+- Expected nanobody contacts: primary contacts at Lys86/Lys87/Arg89/Arg99/Lys102 with secondary interactions across the 5 Å-expanded patch (residues 62–104) that shape the LRP1-facing pocket.

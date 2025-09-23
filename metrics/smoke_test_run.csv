@@ -1,0 +1,8 @@
+script_path,metric,value,output_path,details
+03_define_epitope.py,expanded_epitope_residue_count,31,data/epitopes/lrp1_patch.json,target=data/structures/1mkc.pdb
+03_define_epitope.py,core_epitope_residue_count,5,data/epitopes/lrp1_patch.json,basic surface residues in C-terminal domain
+03_define_epitope.py,visualization_script_generated,1,results/visualizations/lrp1_epitope.pml,PyMOL script for epitope visualization
+04_run_bindcraft.py,top_designs_saved,20,results/designs/scores.json,top-ranked designs exported after filtering
+04_run_bindcraft.py,top_design_composite_score,0.886,results/designs/design_summary.txt,design_id=design_1
+05_convert_to_nanobody.py,nanobodies_generated,10,results/nanobodies/nanobody_data.json,top BindCraft designs reformatted to VHH scaffolds
+06_analyze_results.py,top_nanobody_final_score,68.64,results/validation/final_validation_report.txt,nanobody_id=nb_design_3

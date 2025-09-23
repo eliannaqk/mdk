@@ -1,0 +1,257 @@
+================================================================================
+MDK-LRP1 NANOBODY DESIGN - FINAL VALIDATION REPORT
+================================================================================
+
+EXECUTIVE SUMMARY
+----------------------------------------
+Total designs analyzed: 10
+Developability: 0 low risk, 10 medium risk, 0 high risk
+High expression predicted: 0/10
+
+TOP 3 CANDIDATES FOR EXPERIMENTAL VALIDATION
+----------------------------------------
+
+1. nb_design_3 (Score: 68.64)
+   Binding Score (ipTM): 0.8541752295141096
+   MW: 11.2 kDa
+   pI: 9.7
+   Instability: 36.4
+   Expression: medium
+   PTN cross-reactivity risk: high
+   Estimated yield: 50.0 mg/L
+   Risks: pI outside optimal range: 9.7
+   CDR3: AR
+
+2. nb_design_7 (Score: 68.58)
+   Binding Score (ipTM): 0.8467701187513452
+   MW: 11.8 kDa
+   pI: 8.0
+   Instability: 43.6
+   Expression: medium
+   PTN cross-reactivity risk: high
+   Estimated yield: 50.0 mg/L
+   Risks: High instability index: 43.6
+   CDR3: AR
+
+3. nb_design_8 (Score: 67.65)
+   Binding Score (ipTM): 0.8686151921625354
+   MW: 11.1 kDa
+   pI: 9.1
+   Instability: 38.9
+   Expression: low
+   PTN cross-reactivity risk: high
+   Estimated yield: 50.0 mg/L
+   Risks: pI outside optimal range: 9.1
+   CDR3: AR
+
+
+DETAILED ANALYSIS
+----------------------------------------
+
+nb_design_3:
+  Final Score: 68.64
+  Sequence Length: 101 aa
+  Properties:
+    - Molecular Weight: 11223 Da
+    - Theoretical pI: 9.69
+    - Instability Index: 36.38
+    - Aliphatic Index: 83.86
+    - GRAVY: -0.257
+    - Aromaticity: 0.099
+  Expression Prediction:
+    - Score: 63.2
+    - Level: medium
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 100
+    - Production Cost: medium
+
+nb_design_7:
+  Final Score: 68.58
+  Sequence Length: 108 aa
+  Properties:
+    - Molecular Weight: 11818 Da
+    - Theoretical pI: 8.00
+    - Instability Index: 43.60
+    - Aliphatic Index: 73.98
+    - GRAVY: -0.354
+    - Aromaticity: 0.102
+  Expression Prediction:
+    - Score: 64.7
+    - Level: medium
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 100
+    - Production Cost: medium
+
+nb_design_8:
+  Final Score: 67.65
+  Sequence Length: 101 aa
+  Properties:
+    - Molecular Weight: 11128 Da
+    - Theoretical pI: 9.07
+    - Instability Index: 38.88
+    - Aliphatic Index: 89.70
+    - GRAVY: -0.041
+    - Aromaticity: 0.099
+  Expression Prediction:
+    - Score: 52.7
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_2:
+  Final Score: 67.03
+  Sequence Length: 108 aa
+  Properties:
+    - Molecular Weight: 11998 Da
+    - Theoretical pI: 6.76
+    - Instability Index: 43.34
+    - Aliphatic Index: 80.28
+    - GRAVY: -0.231
+    - Aromaticity: 0.111
+  Expression Prediction:
+    - Score: 58.3
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_1:
+  Final Score: 66.63
+  Sequence Length: 108 aa
+  Properties:
+    - Molecular Weight: 11838 Da
+    - Theoretical pI: 9.06
+    - Instability Index: 41.63
+    - Aliphatic Index: 79.44
+    - GRAVY: -0.132
+    - Aromaticity: 0.083
+  Expression Prediction:
+    - Score: 39.3
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_5:
+  Final Score: 65.43
+  Sequence Length: 105 aa
+  Properties:
+    - Molecular Weight: 11630 Da
+    - Theoretical pI: 7.81
+    - Instability Index: 54.61
+    - Aliphatic Index: 75.14
+    - GRAVY: -0.198
+    - Aromaticity: 0.086
+  Expression Prediction:
+    - Score: 33.8
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_6:
+  Final Score: 65.21
+  Sequence Length: 106 aa
+  Properties:
+    - Molecular Weight: 11880 Da
+    - Theoretical pI: 9.91
+    - Instability Index: 46.56
+    - Aliphatic Index: 80.85
+    - GRAVY: -0.265
+    - Aromaticity: 0.104
+  Expression Prediction:
+    - Score: 48.0
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 100
+    - Production Cost: medium
+
+nb_design_4:
+  Final Score: 64.29
+  Sequence Length: 102 aa
+  Properties:
+    - Molecular Weight: 11175 Da
+    - Theoretical pI: 9.26
+    - Instability Index: 50.67
+    - Aliphatic Index: 82.16
+    - GRAVY: -0.202
+    - Aromaticity: 0.078
+  Expression Prediction:
+    - Score: 48.8
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_10:
+  Final Score: 64.06
+  Sequence Length: 103 aa
+  Properties:
+    - Molecular Weight: 11404 Da
+    - Theoretical pI: 8.75
+    - Instability Index: 45.89
+    - Aliphatic Index: 82.33
+    - GRAVY: -0.027
+    - Aromaticity: 0.097
+  Expression Prediction:
+    - Score: 28.0
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+nb_design_9:
+  Final Score: 62.49
+  Sequence Length: 105 aa
+  Properties:
+    - Molecular Weight: 11614 Da
+    - Theoretical pI: 9.30
+    - Instability Index: 39.56
+    - Aliphatic Index: 85.43
+    - GRAVY: -0.026
+    - Aromaticity: 0.105
+  Expression Prediction:
+    - Score: 52.9
+    - Level: low
+  Production Metrics:
+    - Estimated Yield: 50.0 mg/L
+    - Purification Score: 70
+    - Production Cost: medium
+
+
+RECOMMENDATIONS FOR EXPERIMENTAL VALIDATION
+----------------------------------------
+
+1. Expression System:
+   - Primary: E. coli BL21(DE3) with pET vector system
+   - Alternative: Pichia pastoris for difficult-to-express candidates
+
+2. Purification Strategy:
+   - His-tag purification followed by size exclusion
+   - Consider Protein A purification for Fc-fusion formats
+
+3. Binding Validation:
+   - SPR with immobilized MDK (focus on C-terminal domain)
+   - Competition assay with LRP1 receptor fragments
+   - Cell-based assays using LRP1-expressing cells
+
+4. Specificity Testing:
+   - Cross-reactivity with PTN (pleiotrophin)
+   - Binding to other heparin-binding proteins
+   - Species cross-reactivity (human, mouse, rat MDK)
+
+5. Functional Assays:
+   - MDK-LRP1 signaling inhibition
+   - Cell migration/invasion assays
+   - Downstream pathway analysis (AKT, ERK)
+

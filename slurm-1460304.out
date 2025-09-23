@@ -1,0 +1,45 @@
+============================================================
+LRP1 Binding Epitope Definition
+============================================================
+
+1. Analyzing MDK structure: data/structures/1mkc.pdb
+
+2. Identifying LRP1 binding epitope...
+  Found 5 basic surface residues
+  Clustered into 3 patches
+
+3. Expanding epitope definition...
+  Core epitope: 5 residues
+  Expanded epitope: 31 residues
+
+4. Saving epitope definition...
+  Saved epitope definition to: data/epitopes/lrp1_patch.json
+
+5. Creating visualization...
+  Created PyMOL visualization script: results/visualizations/lrp1_epitope.pml
+
+============================================================
+Epitope Definition Summary
+============================================================
+
+LRP1 Binding Epitope:
+  Core residues: [86, 87, 89, 99, 102]
+  Total epitope size: 31 residues
+  Estimated surface area: ~1550 Ų
+
+Key basic residues for LRP1 binding:
+  - LYS86
+  - LYS87
+  - ARG89
+  - ARG99
+  - LYS102
+
+Output files:
+  - Epitope definition: data/epitopes/lrp1_patch.json
+  - PyMOL script: results/visualizations/lrp1_epitope.pml
+
+Next step: Run 04_run_bindcraft.py to design binders
+Traceback (most recent call last):
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 9, in <module>
+    import torch
+ModuleNotFoundError: No module named 'torch'

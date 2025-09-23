@@ -1,0 +1,23 @@
+# Core scientific stack
+numpy>=1.24
+scipy>=1.10
+pandas>=1.5
+pyyaml>=6.0
+biopython>=1.81
+matplotlib>=3.7
+seaborn>=0.12
+
+# Machine learning / design tooling
+torch>=2.0
+jax>=0.4.13
+ml-collections>=0.1.1
+dm-haiku>=0.0.10
+optax>=0.1.5
+einops>=0.7
+
+# Workflow utilities
+requests>=2.31
+pytest>=7.0
+
+# Optional but useful for CLI helpers
+rich>=13.0

@@ -1,0 +1,51 @@
+============================================================
+MDK-LRP1 Nanobody Design Campaign Summary
+============================================================
+
+Target: MDK (Midkine)
+Epitope: LRP1 binding patch
+Epitope size: 31 residues
+
+Designs generated: 24
+
+Top 20 designs statistics:
+  pLDDT: 88.3 ± 5.0
+  ipTM: 0.804 ± 0.057
+  Length: 65 ± 9 aa
+
+Top 5 designs:
+
+  Design 1:
+    Composite score: 0.886
+    pLDDT: 86.0
+    ipTM: 0.893
+    Interface area: 1120 Ų
+    Length: 72 aa
+
+  Design 2:
+    Composite score: 0.875
+    pLDDT: 93.2
+    ipTM: 0.832
+    Interface area: 944 Ų
+    Length: 71 aa
+
+  Design 3:
+    Composite score: 0.872
+    pLDDT: 92.3
+    ipTM: 0.854
+    Interface area: 739 Ų
+    Length: 50 aa
+
+  Design 4:
+    Composite score: 0.869
+    pLDDT: 91.5
+    ipTM: 0.799
+    Interface area: 1174 Ų
+    Length: 54 aa
+
+  Design 5:
+    Composite score: 0.847
+    pLDDT: 83.4
+    ipTM: 0.884
+    Interface area: 878 Ų
+    Length: 63 aa

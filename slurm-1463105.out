@@ -1,0 +1,120 @@
+============================================================
+LRP1 Binding Epitope Definition
+============================================================
+
+1. Analyzing MDK structure: data/structures/1mkc.pdb
+
+2. Identifying LRP1 binding epitope...
+  Found 5 basic surface residues
+  Clustered into 3 patches
+
+3. Expanding epitope definition...
+  Core epitope: 5 residues
+  Expanded epitope: 31 residues
+
+4. Saving epitope definition...
+  Saved epitope definition to: data/epitopes/lrp1_patch.json
+
+5. Creating visualization...
+  Created PyMOL visualization script: results/visualizations/lrp1_epitope.pml
+
+============================================================
+Epitope Definition Summary
+============================================================
+
+LRP1 Binding Epitope:
+  Core residues: [86, 87, 89, 99, 102]
+  Total epitope size: 31 residues
+  Estimated surface area: ~1550 Ų
+
+Key basic residues for LRP1 binding:
+  - LYS86
+  - LYS87
+  - ARG89
+  - ARG99
+  - LYS102
+
+Output files:
+  - Epitope definition: data/epitopes/lrp1_patch.json
+  - PyMOL script: results/visualizations/lrp1_epitope.pml
+
+Next step: Run 04_run_bindcraft.py to design binders
+Available GPUs:
+NVIDIA H2001: gpu
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                  PyRosetta-4                                  │
+│               Created in JHU by Sergey Lyskov and PyRosetta Team              │
+│               (C) Copyright Rosetta Commons Member Institutions               │
+│                                                                               │
+│ NOTE: USE OF PyRosetta FOR COMMERCIAL PURPOSES REQUIRES PURCHASE OF A LICENSE │
+│          See LICENSE.PyRosetta.md or email license@uw.edu for details         │
+└───────────────────────────────────────────────────────────────────────────────┘
+PyRosetta-4 2025 [Rosetta PyRosetta4.Release.python39.ubuntu 2025.37+release.df75a9c48e763e52a7aa3f5dfba077f4da88dbf5 2025-09-03T12:23:30] retrieved from: http://www.pyrosetta.org
+Running binder design for target settings
+Design settings used: default_4stage_multimer
+Filtering designs based on default_filters
+Starting trajectory: MDK_human_l62_s564027
+Stage 1: Test Logits
+Traceback (most recent call last):
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/transform.py", line 130, in to_prng_sequence
+    rng = hk.PRNGSequence(rng)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/base.py", line 1060, in __init__
+    assert_is_prng_key(key_or_seed)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/base.py", line 1009, in assert_is_prng_key
+    default_impl = jax.random.default_prng_impl()
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/jax/_src/deprecations.py", line 55, in getattr
+    raise AttributeError(f"module {module!r} has no attribute {name!r}")
+AttributeError: module 'jax.random' has no attribute 'default_prng_impl'
+
+The above exception was the direct cause of the following exception:
+
+jax.errors.SimplifiedTraceback: For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/eqk3/apps/BindCraft/bindcraft.py", line 109, in <module>
+    trajectory = binder_hallucination(design_name, target_settings["starting_pdb"], target_settings["chains"],
+  File "/home/eqk3/apps/BindCraft/functions/colabdesign_utils.py", line 97, in binder_hallucination
+    af_model.design_logits(iters=50, e_soft=0.9, models=design_models, num_models=1, sample_models=advanced_settings["sample_models"], save_best=True)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 354, in design_logits
+    self.design(iters, **kwargs)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 348, in design
+    self.step(lr_scale=lr_scale, num_recycles=num_recycles,
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 214, in step
+    self.run(num_recycles=num_recycles, num_models=num_models, sample_models=sample_models,
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 96, in run
+    auxs.append(self._recycle(p, num_recycles=num_recycles, backprop=backprop))
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 195, in _recycle
+    aux = self._single(model_params, backprop=False)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/design.py", line 142, in _single
+    loss, aux = self._model["fn"](*flags)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/model.py", line 195, in _model
+    outputs = runner.apply(model_params, key(), inputs)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/colabdesign/af/alphafold/model/model.py", line 93, in apply
+    results = self.apply_fn(params, key, feat)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/transform.py", line 187, in apply_fn
+    out, state = f.apply(params, None, *args, **kwargs)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/transform.py", line 452, in apply_fn
+    rng = to_prng_sequence(
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/site-packages/haiku/_src/transform.py", line 132, in to_prng_sequence
+    raise ValueError(
+ValueError: Apply must be called with an RNG as the second argument, the required signature is: `apply(params, rng, *a, **k)`. The object was of type <class 'jax._src.interpreters.partial_eval.DynamicJaxprTracer'>: Traced<ShapedArray(uint32[2])>with<DynamicJaxprTrace(level=3/0)>
+
+============================================================
+Running BindCraft (real pipeline)
+============================================================
+Warning: dropping hotspot residues absent from target PDB: 107
+
+Running BindCraft pipeline:
+python bindcraft.py --settings /home/eqk3/MDX/results/bindcraft/20250922-174917/settings.generated.json --filters /home/eqk3/apps/BindCraft/settings_filters/default_filters.json --advanced /home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json
+Traceback (most recent call last):
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 271, in <module>
+    main()
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 254, in main
+    design_path = invoke_bindcraft(settings_path)
+  File "/home/eqk3/MDX/04_run_bindcraft.py", line 122, in invoke_bindcraft
+    subprocess.run(cmd, cwd=str(BINDCRAFT_ROOT), env=env, check=True)
+  File "/home/eqk3/project_pi_mg269/eqk3/.conda-envs/bindcraft-af3/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'bindcraft.py', '--settings', '/home/eqk3/MDX/results/bindcraft/20250922-174917/settings.generated.json', '--filters', '/home/eqk3/apps/BindCraft/settings_filters/default_filters.json', '--advanced', '/home/eqk3/apps/BindCraft/settings_advanced/default_4stage_multimer.json']' returned non-zero exit status 1.
