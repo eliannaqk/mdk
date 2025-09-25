@@ -14,39 +14,57 @@ from typing import List, Dict, Tuple
 import warnings
 warnings.filterwarnings('ignore')
 
-def load_config():
+def load_config(path: str = "config.yaml"):
     """Load configuration"""
-    with open("config.yaml", 'r') as f:
+    with open(path, 'r') as f:
         return yaml.safe_load(f)
 
 def load_top_designs(results_dir, top_n=10):
     """Load top scoring designs from BindCraft results"""
-    
+
     sequences_file = Path(results_dir) / "sequences.fasta"
     scores_file = Path(results_dir) / "scores.json"
-    
-    # Load sequences
+
+    if not sequences_file.exists():
+        raise FileNotFoundError(f"Missing sequences file: {sequences_file}")
+    if not scores_file.exists():
+        raise FileNotFoundError(f"Missing scores file: {scores_file}")
+
     sequences = {}
     for record in SeqIO.parse(sequences_file, "fasta"):
-        design_id = record.id.split("_")[1]  # Extract design number
-        sequences[f"design_{design_id}"] = str(record.seq)
-    
-    # Load scores
+        raw_id = record.id
+        if "_score_" in raw_id:
+            design_key = raw_id.split("_score_", 1)[0]
+        elif raw_id.startswith("design_"):
+            design_key = raw_id
+        else:
+            parts = raw_id.split("_", 1)
+            if len(parts) == 2 and parts[0] == "design":
+                design_key = f"design_{parts[1]}"
+            else:
+                design_key = raw_id
+        sequences[design_key] = str(record.seq)
+
     with open(scores_file, 'r') as f:
         scores = json.load(f)
-    
-    # Combine and return top N
+
     designs = []
     for score_data in scores[:top_n]:
         design_id = score_data['design_id']
-        if design_id in sequences:
-            designs.append({
-                'id': design_id,
-                'sequence': sequences[design_id],
-                'scores': score_data['scores'],
-                'composite_score': score_data['composite_score']
-            })
-    
+        sequence = sequences.get(design_id)
+        if sequence is None:
+            fallback = sequences.get(f"design_{design_id}")
+            if fallback is not None:
+                sequence = fallback
+        if sequence is None:
+            continue
+        designs.append({
+            'id': design_id,
+            'sequence': sequence,
+            'scores': score_data['scores'],
+            'composite_score': score_data['composite_score']
+        })
+
     return designs
 
 def identify_paratope_residues(design_sequence, interface_threshold=0.8):
@@ -346,11 +364,13 @@ def main():
     
     # Load configuration
     config = load_config()
+    campaign = config.get('output', {}).get('campaign', 'default')
+    base_output = Path(config['output']['base_dir']) / campaign
     framework_regions = config['nanobody']['framework']
     
     # Load top designs from BindCraft
     print("\n1. Loading top BindCraft designs...")
-    results_dir = Path(config['output']['base_dir']) / "designs"
+    results_dir = base_output / "designs"
     
     if not results_dir.exists():
         print(f"Error: Results directory {results_dir} not found!")
@@ -359,6 +379,9 @@ def main():
     
     designs = load_top_designs(results_dir, top_n=10)
     print(f"  Loaded {len(designs)} designs")
+    if not designs:
+        print("  No designs matched scores; aborting nanobody conversion.")
+        return
     
     # Convert to nanobody format
     print("\n2. Converting designs to nanobody format...")
@@ -372,7 +395,7 @@ def main():
     
     # Save results
     print("\n3. Saving nanobody sequences...")
-    output_dir = Path(config['output']['base_dir']) / "nanobodies"
+    output_dir = base_output / "nanobodies"
     save_nanobodies(nanobodies, output_dir)
     
     # Generate report

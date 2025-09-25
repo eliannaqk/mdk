@@ -1,309 +1,228 @@
 #!/usr/bin/env python3
-"""
-Define and visualize the LRP1 binding epitope on MDK
-"""
+"""Define and visualise the dual (LRP1+integrin) epitope on MDK C-domain."""
 
+from __future__ import annotations
+
+import argparse
 import json
-import yaml
-import numpy as np
 from pathlib import Path
-from Bio import PDB
-from Bio.PDB import PDBParser, NeighborSearch
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from typing import Dict, List, Tuple
 
-def load_config():
-    """Load configuration from YAML file"""
-    with open("config.yaml", 'r') as f:
-        return yaml.safe_load(f)
+import numpy as np
+import yaml
+from Bio.PDB import NeighborSearch, PDBParser
 
-def get_surface_residues(structure, neighbor_radius=5.0, neighbor_threshold=30):
-    """
-    Identify surface-exposed residues by counting nearby atoms within a radius.
-    """
-    atoms = list(structure.get_atoms())
-    ns = NeighborSearch(atoms)
 
-    surface_residues = []
-    for residue in structure.get_residues():
-        if residue.id[0] != ' ':  # Skip heteroatoms
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Prepare MDK dual-block epitope definition")
+    parser.add_argument(
+        "--config",
+        default="config.yaml",
+        help="Path to configuration YAML (default: config.yaml)",
+    )
+    parser.add_argument(
+        "--epitope-json",
+        default="data/epitopes/mdk_dual_block_patch.json",
+        help="Epitope JSON describing LRP1 core and integrin auxiliary residues",
+    )
+    parser.add_argument(
+        "--visualisation",
+        default="results/visualizations/mdk_dual_block_epitope.pml",
+        help="Output PyMOL script for visualisation",
+    )
+    return parser.parse_args()
+
+
+def load_config(path: str) -> Dict:
+    with open(path, "r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def load_epitope_json(path: str) -> Tuple[Dict, List[int], List[int], List[int], float]:
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    core = sorted({int(r) for r in payload.get("core_residues", [])})
+    integrin_aux = sorted({int(r) for r in payload.get("integrin_aux", [])})
+    expanded = sorted({int(r) for r in payload.get("expanded_residues", [])})
+    expand_radius = float(payload.get("expand_radius", 5.0))
+
+    return payload, core, integrin_aux, expanded, expand_radius
+
+
+def cluster_residues(chain, residues: List[Dict], distance_cutoff: float = 10.0) -> List[List[int]]:
+    if not residues:
+        return []
+
+    coords: List[np.ndarray] = []
+    numbers: List[int] = []
+
+    for info in residues:
+        num = info["number"]
+        try:
+            residue = chain[num]
+        except KeyError:
             continue
+        if "CA" not in residue:
+            continue
+        coords.append(residue["CA"].coord)
+        numbers.append(num)
 
-        min_neighbors = min(len(ns.search(atom.coord, neighbor_radius)) for atom in residue.get_atoms())
-        if min_neighbors <= neighbor_threshold:
-            surface_residues.append(residue.id[1])
+    if not coords:
+        return []
 
-    return surface_residues
+    coords = np.array(coords)
+    patches: List[List[int]] = []
+    used = set()
+
+    for idx, res_num in enumerate(numbers):
+        if res_num in used:
+            continue
+        patch = [res_num]
+        used.add(res_num)
+        for jdx, other in enumerate(numbers):
+            if other in used:
+                continue
+            if np.linalg.norm(coords[idx] - coords[jdx]) < distance_cutoff:
+                patch.append(other)
+                used.add(other)
+        patches.append(sorted(patch))
+
+    return patches
 
 
-def define_lrp1_epitope(pdb_file):
-    """
-    Define the LRP1 binding epitope on MDK C-terminal domain
-    Based on literature: basic patches in C-domain
-    """
-    
-    parser = PDBParser(QUIET=True)
-    structure = parser.get_structure("MDK", pdb_file)
-    
-    # Get first model and chain
+def expand_epitope(structure, chain_id: str, core_numbers: List[int], radius: float) -> List[int]:
     model = structure[0]
-    chain = list(model.get_chains())[0]
-    
-    # Define epitope based on basic residues in C-terminal domain
-    # These are conserved basic patches likely involved in LRP1 binding
-    epitope_residues = []
-    basic_residues = {'ARG', 'LYS', 'HIS'}
-    
-    # Get surface residues
-    surface_res = get_surface_residues(structure)
-    
-    # Identify basic surface residues in C-domain
+    chain = model[chain_id]
+
+    target_atoms = []
     for residue in chain.get_residues():
         if residue.id[0] != ' ':
             continue
-        
-        res_num = residue.id[1]
-        res_name = residue.get_resname()
-        
-        # Focus on C-terminal domain (roughly residues 80-121 in 1mkc)
-        # and surface-exposed basic residues
-        if res_num >= 80 and res_num <= 121:
-            if res_name in basic_residues and res_num in surface_res:
-                epitope_residues.append({
-                    'number': res_num,
-                    'name': res_name,
-                    'chain': chain.id
-                })
-    
-    # Define epitope patches based on spatial clustering
-    epitope_patches = cluster_residues(chain, epitope_residues)
-    
-    return epitope_residues, epitope_patches
+        if residue.id[1] in core_numbers:
+            target_atoms.extend(list(residue.get_atoms()))
 
-def cluster_residues(chain, epitope_residues, distance_cutoff=10.0):
-    """
-    Cluster epitope residues into patches based on spatial proximity
-    """
-    if not epitope_residues:
-        return []
-    
-    # Get CA coordinates
-    coords = []
-    res_nums = []
-    for res_info in epitope_residues:
-        try:
-            residue = chain[res_info['number']]
-            if 'CA' in residue:
-                coords.append(residue['CA'].coord)
-                res_nums.append(res_info['number'])
-        except:
-            continue
-    
-    if not coords:
-        return []
-    
-    coords = np.array(coords)
-    
-    # Simple clustering based on distance
-    patches = []
-    used = set()
-    
-    for i, res_num in enumerate(res_nums):
-        if res_num in used:
-            continue
-            
-        patch = [res_num]
-        used.add(res_num)
-        
-        # Find nearby residues
-        for j, other_res in enumerate(res_nums):
-            if other_res not in used:
-                dist = np.linalg.norm(coords[i] - coords[j])
-                if dist < distance_cutoff:
-                    patch.append(other_res)
-                    used.add(other_res)
-        
-        patches.append(patch)
-    
-    return patches
-
-def expand_epitope(structure, core_residues, expand_radius=5.0):
-    """
-    Expand epitope definition to include neighboring residues
-    """
-    parser = PDBParser(QUIET=True)
-    
-    # Get all atoms from core epitope residues
-    epitope_atoms = []
-    chain = list(structure[0].get_chains())[0]
-    
-    for res_num in core_residues:
-        try:
-            residue = chain[res_num]
-            epitope_atoms.extend(list(residue.get_atoms()))
-        except:
-            continue
-    
-    # Find neighboring residues
     all_atoms = list(structure.get_atoms())
     ns = NeighborSearch(all_atoms)
-    
-    expanded_residues = set(core_residues)
-    
-    for atom in epitope_atoms:
-        neighbors = ns.search(atom.coord, expand_radius)
-        for neighbor in neighbors:
-            res = neighbor.get_parent()
-            if res.id[0] == ' ':  # Regular residue
-                expanded_residues.add(res.id[1])
-    
-    return sorted(list(expanded_residues))
+    expanded = set(core_numbers)
 
-def visualize_epitope(pdb_file, epitope_residues, output_file):
-    """
-    Create PyMOL script to visualize epitope
-    """
-    
-    pymol_script = f"""# PyMOL script to visualize LRP1 binding epitope on MDK
-    
-# Load structure
-load {pdb_file}, MDK
+    for atom in target_atoms:
+        for neighbour in ns.search(atom.coord, radius):
+            parent = neighbour.get_parent()
+            if parent.id[0] == ' ':
+                expanded.add(parent.id[1])
 
-# Set initial view
-hide everything
+    return sorted(expanded)
+
+
+def collect_residue_metadata(chain, residue_numbers: List[int]) -> List[Dict]:
+    metadata: List[Dict] = []
+    for number in sorted(residue_numbers):
+        try:
+            residue = chain[number]
+        except KeyError:
+            continue
+        if residue.id[0] != ' ':
+            continue
+        metadata.append(
+            {
+                "number": number,
+                "name": residue.get_resname(),
+                "chain": chain.id,
+            }
+        )
+    return metadata
+
+
+def visualize_epitope(pdb_path: str, residues: List[int], output_path: Path) -> None:
+    selection = "+".join(str(r) for r in residues)
+    pymol_script = f"""# PyMOL script to visualise MDK dual-block epitope
+
+load {pdb_path}, MDK
+hide everything, MDK
 show cartoon, MDK
 color grey80, MDK
 
-# Highlight epitope residues
-select lrp1_epitope, MDK and resi {'+'.join(map(str, epitope_residues))}
-show sticks, lrp1_epitope
-color red, lrp1_epitope
+select mdk_dual_block, MDK and resi {selection}
+show sticks, mdk_dual_block
+color marine, mdk_dual_block
 
-# Label key residues
-select key_basic, MDK and resn ARG+LYS and resi {'+'.join(map(str, epitope_residues[:5]))}
-label key_basic and name CA, "%s-%s" % (resn, resi)
-
-# Create surface representation
 show surface, MDK
 set transparency, 0.5, MDK
+color skyblue, mdk_dual_block
 
-# Color surface by epitope
-color salmon, lrp1_epitope
-
-# Set view
-zoom MDK
-orient
-
-# Ray trace for publication quality
+zoom mdk_dual_block, 10
+orient mdk_dual_block
 bg_color white
 set ray_shadows, 0
-# ray 1200, 1200
-
-# Save session
-save {str(output_file).replace('.pml', '.pse')}
+save {str(output_path).replace('.pml', '.pse')}
 """
-    
-    with open(output_file, 'w') as f:
-        f.write(pymol_script)
-    
-    print(f"  Created PyMOL visualization script: {output_file}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        handle.write(pymol_script)
 
-def save_epitope_definition(epitope_data, output_file):
-    """Save epitope definition to JSON file"""
-    
-    with open(output_file, 'w') as f:
-        json.dump(epitope_data, f, indent=2)
-    
-    print(f"  Saved epitope definition to: {output_file}")
 
-def main():
-    """Main epitope definition pipeline"""
-    
-    print("=" * 60)
-    print("LRP1 Binding Epitope Definition")
-    print("=" * 60)
-    
-    # Load configuration
-    config = load_config()
-    
-    # Parse MDK structure
-    pdb_file = Path(config['target']['pdb_file'])
-    if not pdb_file.exists():
-        print(f"Error: PDB file {pdb_file} not found!")
-        print("Please run 02_download_structures.py first")
-        return
-    
-    print(f"\n1. Analyzing MDK structure: {pdb_file}")
-    
+def main() -> None:
+    args = parse_args()
+    config = load_config(args.config)
+
+    pdb_file = config["target"]["pdb_file"]
+    chain_id = config["target"].get("chain", "A").strip() or "A"
+
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("MDK", pdb_file)
-    
-    # Define core epitope residues
-    print("\n2. Identifying LRP1 binding epitope...")
-    epitope_residues, epitope_patches = define_lrp1_epitope(pdb_file)
-    
-    print(f"  Found {len(epitope_residues)} basic surface residues")
-    print(f"  Clustered into {len(epitope_patches)} patches")
-    
-    # Get core residue numbers
-    core_residues = [r['number'] for r in epitope_residues]
-    
-    # Expand epitope
-    print("\n3. Expanding epitope definition...")
-    expand_radius = config['epitope'].get('expand_radius', 5.0)
-    expanded_residues = expand_epitope(structure, core_residues, expand_radius)
-    
-    print(f"  Core epitope: {len(core_residues)} residues")
-    print(f"  Expanded epitope: {len(expanded_residues)} residues")
-    
-    # Prepare epitope data
-    epitope_data = {
-        'target': config['target']['name'],
-        'epitope_name': 'LRP1_binding_patch',
-        'description': 'Predicted LRP1 binding surface on MDK C-terminal domain',
-        'core_residues': core_residues,
-        'expanded_residues': expanded_residues,
-        'patches': epitope_patches,
-        'basic_residues': [r for r in epitope_residues],
-        'expand_radius': expand_radius,
-        'surface_area_estimate': len(expanded_residues) * 50,  # Rough estimate
-    }
-    
-    # Save epitope definition
-    print("\n4. Saving epitope definition...")
-    epitope_dir = Path("data/epitopes")
-    epitope_dir.mkdir(parents=True, exist_ok=True)
-    
-    output_json = epitope_dir / "lrp1_patch.json"
-    save_epitope_definition(epitope_data, output_json)
-    
-    # Create visualization
-    print("\n5. Creating visualization...")
-    vis_dir = Path("results/visualizations")
-    vis_dir.mkdir(parents=True, exist_ok=True)
-    
-    pymol_script = vis_dir / "lrp1_epitope.pml"
-    visualize_epitope(pdb_file, expanded_residues, pymol_script)
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print("Epitope Definition Summary")
+
+    payload, core, integrin_aux, expanded, expand_radius = load_epitope_json(args.epitope_json)
+
     print("=" * 60)
-    
-    print(f"\nLRP1 Binding Epitope:")
-    print(f"  Core residues: {core_residues[:10]}{'...' if len(core_residues) > 10 else ''}")
-    print(f"  Total epitope size: {len(expanded_residues)} residues")
-    print(f"  Estimated surface area: ~{epitope_data['surface_area_estimate']} Ų")
-    
-    print(f"\nKey basic residues for LRP1 binding:")
-    for res in epitope_residues[:5]:
-        print(f"  - {res['name']}{res['number']}")
-    
-    print(f"\nOutput files:")
-    print(f"  - Epitope definition: {output_json}")
-    print(f"  - PyMOL script: {pymol_script}")
-    
-    print("\nNext step: Run 04_run_bindcraft.py to design binders")
+    print("MDK C-domain dual epitope definition")
+    print("=" * 60)
+    print(f"PDB: {pdb_file} (chain {chain_id})")
+    print(f"LRP1 hotspots ({len(core)}): {core}")
+    print(f"Integrin auxiliary residues ({len(integrin_aux)}): {integrin_aux}")
+
+    model = structure[0]
+    if chain_id not in model:
+        raise KeyError(f"Chain '{chain_id}' not present in {pdb_file}")
+    chain = model[chain_id]
+
+    union_numbers = sorted({*core, *integrin_aux})
+    residue_info = collect_residue_metadata(chain, union_numbers)
+    patches = cluster_residues(chain, residue_info)
+
+    if not expanded:
+        print("No expanded shell supplied; computing using neighbour search...")
+        expanded = expand_epitope(structure, chain_id, union_numbers, expand_radius)
+
+    print(f"Expanded shell residues ({len(expanded)}): {expanded[:10]}{'...' if len(expanded) > 10 else ''}")
+
+    epitope_payload = {
+        "target": payload.get("target", config["target"]["name"]),
+        "epitope_name": payload.get("epitope_name", "LRP1_and_Integrin_union"),
+        "description": payload.get(
+            "description",
+            "Union of LRP1-facing and integrin-facing surfaces on MDK C-domain",
+        ),
+        "core_residues": core,
+        "integrin_aux": integrin_aux,
+        "expanded_residues": expanded,
+        "patches": patches,
+        "basic_residues": residue_info,
+        "expand_radius": expand_radius,
+        "surface_area_estimate": len(expanded) * 50,
+        "source_json": args.epitope_json,
+    }
+
+    output_path = Path(args.epitope_json)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        json.dump(epitope_payload, handle, indent=2)
+    print(f"Saved epitope definition to {output_path}")
+
+    visualize_epitope(pdb_file, union_numbers, Path(args.visualisation))
+    print(f"Wrote PyMOL script to {args.visualisation}")
+    print("Done.")
+
 
 if __name__ == "__main__":
     main()

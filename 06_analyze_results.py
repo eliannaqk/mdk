@@ -1,515 +1,564 @@
 #!/usr/bin/env python3
-"""
-Analyze and validate nanobody designs for experimental testing
-"""
+"""Analyze nanobody designs with dual LRP1/integrin competition gating."""
 
+from __future__ import annotations
+
+import argparse
 import json
-import yaml
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from Bio import SeqIO, PDB
-from Bio.SeqUtils import ProtParam
-import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Dict
-import warnings
-warnings.filterwarnings('ignore')
+import yaml
+from Bio.PDB import NeighborSearch, PDBParser
+from Bio.PDB.SASA import ShrakeRupley
+from Bio.SeqUtils import ProtParam
 
-def load_config():
-    """Load configuration"""
-    with open("config.yaml", 'r') as f:
-        return yaml.safe_load(f)
+sns.set_style("whitegrid")
 
-def load_nanobodies(nanobody_dir):
-    """Load nanobody data"""
-    
-    data_file = Path(nanobody_dir) / "nanobody_data.json"
-    
-    with open(data_file, 'r') as f:
-        nanobodies = json.load(f)
-    
-    return nanobodies
 
-def check_ptn_cross_reactivity(nanobody_sequence):
-    """
-    Check potential cross-reactivity with Pleiotrophin (PTN)
-    PTN is MDK's paralog with similar structure
-    """
-    
-    # Key differences between MDK and PTN that we want to exploit
-    # MDK has specific basic patches that differ from PTN
-    
-    # Simplified check - look for MDK-specific motifs
-    mdk_specific_motifs = [
-        'RGR',  # MDK-specific basic cluster
-        'KKK',  # Triple lysine found in MDK
-        'RKR'   # Another MDK-specific pattern
-    ]
-    
-    specificity_score = 0
-    for motif in mdk_specific_motifs:
-        if motif in nanobody_sequence:
-            specificity_score += 1
-    
-    # Higher score suggests better MDK specificity
-    return {
-        'specificity_score': specificity_score,
-        'risk': 'low' if specificity_score >= 2 else 'medium' if specificity_score >= 1 else 'high'
-    }
 
-def analyze_developability(nanobody):
-    """
-    Comprehensive developability assessment
-    """
-    
-    sequence = nanobody['sequence']
-    
-    # Use Biopython's ProtParam for detailed analysis
+
+def load_reference_residue_numbers(pdb_file: Path, chain_id: str) -> List[int]:
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("reference", str(pdb_file))
+    model = structure[0]
+    if chain_id not in model:
+        raise KeyError(f"Chain {chain_id} missing from reference structure {pdb_file}")
+    numbers: List[int] = []
+    for residue in model[chain_id].get_residues():
+        if residue.id[0] == ' ':
+            numbers.append(residue.id[1])
+    return numbers
+
+
+def build_residue_number_map(pdb_path: Path, chain_id: str, reference_numbers: List[int]) -> Dict[int, int]:
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("design", str(pdb_path))
+    model = structure[0]
+    if chain_id not in model:
+        return {}
+    residues = [residue for residue in model[chain_id].get_residues() if residue.id[0] == ' ']
+    mapping: Dict[int, int] = {}
+    limit = min(len(residues), len(reference_numbers))
+    for idx in range(limit):
+        mapping[residues[idx].id[1]] = reference_numbers[idx]
+    return mapping
+@dataclass
+class CampaignPaths:
+    campaign: str
+    base: Path
+    designs_dir: Path
+    nanobodies_dir: Path
+    validation_dir: Path
+    bindcraft_log: Path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate MDK nanobody designs")
+    parser.add_argument("--config", default="config.yaml", help="Configuration YAML (default: config.yaml)")
+    parser.add_argument(
+        "--campaign",
+        default=None,
+        help="Campaign name; overrides config output.campaign",
+    )
+    parser.add_argument(
+        "--run-dir",
+        default=None,
+        help="Explicit BindCraft run directory containing Accepted models (overrides last_run.txt)",
+    )
+    parser.add_argument(
+        "--footprints-dir",
+        default="data/footprints",
+        help="Directory containing receptor footprint JSON files",
+    )
+    return parser.parse_args()
+
+
+def load_config(path: str) -> Dict:
+    with open(path, "r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def configure_paths(config: Dict, campaign_override: Optional[str]) -> CampaignPaths:
+    campaign = campaign_override or config.get("output", {}).get("campaign", "default")
+    base = Path(config["output"]["base_dir"]) / campaign
+    designs_dir = base / "designs"
+    nanobodies_dir = base / "nanobodies"
+    validation_dir = base / "validation"
+    bindcraft_log = base / "bindcraft" / "last_run.txt"
+    return CampaignPaths(campaign, base, designs_dir, nanobodies_dir, validation_dir, bindcraft_log)
+
+
+def load_nanobodies(nanobody_dir: Path) -> List[Dict]:
+    data_file = nanobody_dir / "nanobody_data.json"
+    if not data_file.exists():
+        raise FileNotFoundError(f"Nanobody data not found: {data_file}")
+    with data_file.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def load_footprint(footprints_dir: Path, name: str) -> List[int]:
+    path = footprints_dir / name
+    if not path.exists():
+        raise FileNotFoundError(f"Footprint file missing: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    residues = sorted({int(r) for r in payload.get("residues", [])})
+    if not residues:
+        raise ValueError(f"Footprint {path} does not contain residues.")
+    return residues
+
+
+def resolve_run_directory(paths: CampaignPaths, override: Optional[str]) -> Path:
+    if override:
+        run_dir = Path(override).resolve()
+    else:
+        if not paths.bindcraft_log.exists():
+            raise FileNotFoundError(
+                f"BindCraft log {paths.bindcraft_log} missing; provide --run-dir to locate Accepted structures."
+            )
+        run_dir = Path(paths.bindcraft_log.read_text().strip()).resolve()
+    if not run_dir.exists():
+        raise FileNotFoundError(f"BindCraft run directory not found: {run_dir}")
+    return run_dir
+
+
+def find_design_pdb(run_dir: Path, design_id: str) -> Optional[Path]:
+    accepted_dir = run_dir / "Accepted"
+    if not accepted_dir.exists():
+        return None
+    matches = sorted(accepted_dir.glob(f"{design_id}_model*.pdb"))
+    if matches:
+        return matches[0]
+    fallback = accepted_dir / f"{design_id}.pdb"
+    return fallback if fallback.exists() else None
+
+
+def compute_residue_sasa(structure, chain_id: str) -> Dict[int, float]:
+    sr = ShrakeRupley()
+    sr.compute(structure, level="R")
+    sasas: Dict[int, float] = {}
+    model = structure[0]
+    if chain_id not in model:
+        return sasas
+    chain = model[chain_id]
+    for residue in chain.get_residues():
+        if residue.id[0] != ' ':
+            continue
+        sasas[residue.id[1]] = residue.xtra.get("EXP_SASA", 0.0)
+    return sasas
+
+
+def compute_occlusion(pdb_path: Path, target_chain: str, footprint: List[int], sasa_drop: float = 0.2,
+                      distance_cutoff: float = 5.0, residue_map: Optional[Dict[int, int]] = None) -> Tuple[float, Dict[int, Dict[str, float]]]:
+    parser = PDBParser(QUIET=True)
+    complex_structure = parser.get_structure("complex", str(pdb_path))
+    model = complex_structure[0]
+    if target_chain not in model:
+        raise KeyError(f"Chain {target_chain} absent from {pdb_path}")
+
+    binder_atoms = []
+    for chain in model:
+        if chain.id == target_chain:
+            continue
+        binder_atoms.extend(atom for atom in chain.get_atoms() if atom.element != 'H')
+
+    ns = NeighborSearch(binder_atoms) if binder_atoms else None
+
+    complex_sasa = compute_residue_sasa(complex_structure, target_chain)
+
+    free_structure = parser.get_structure("target_only", str(pdb_path))
+    free_model = free_structure[0]
+    for chain in list(free_model):
+        if chain.id != target_chain:
+            free_model.detach_child(chain.id)
+    free_sasa = compute_residue_sasa(free_structure, target_chain)
+
+    occluded = 0
+    per_residue: Dict[int, Dict[str, float]] = {}
+
+    target_chain_obj = model[target_chain]
+    for residue in target_chain_obj.get_residues():
+        if residue.id[0] != ' ':
+            continue
+        resnum = residue.id[1]
+        mapped_num = residue_map.get(resnum, resnum) if residue_map else resnum
+        if mapped_num not in footprint:
+            continue
+
+        free_val = free_sasa.get(resnum, 0.0)
+        complex_val = complex_sasa.get(resnum, free_val)
+        drop = (free_val - complex_val) / free_val if free_val > 1e-6 else 0.0
+
+        within_distance = False
+        if ns is not None:
+            for atom in residue.get_atoms():
+                if atom.element == 'H':
+                    continue
+                close = ns.search(atom.coord, distance_cutoff)
+                if close:
+                    within_distance = True
+                    break
+
+        is_occluded = False
+        if free_val > 1e-6 and drop >= sasa_drop:
+            is_occluded = True
+        elif within_distance:
+            is_occluded = True
+
+        if is_occluded:
+            occluded += 1
+
+        per_residue[mapped_num] = {
+            "sasa_free": free_val,
+            "sasa_complex": complex_val,
+            "drop_fraction": drop,
+            "binder_contact": 1.0 if within_distance else 0.0,
+        }
+
+    if not footprint:
+        return 0.0, per_residue
+
+    return occluded / len(footprint), per_residue
+
+
+def check_ptn_cross_reactivity(nanobody_sequence: str) -> Dict[str, object]:
+    motifs = ['RGR', 'KKK', 'RKR']
+    score = sum(1 for motif in motifs if motif in nanobody_sequence)
+    risk = 'low' if score >= 2 else 'medium' if score >= 1 else 'high'
+    return {"specificity_score": score, "risk": risk}
+
+
+def analyze_developability(sequence: str) -> Dict[str, object]:
     analyzer = ProtParam.ProteinAnalysis(sequence)
+    length = len(sequence)
+    if length == 0:
+        raise ValueError('Nanobody sequence is empty.')
 
-    try:
-        aliphatic_index = analyzer.aliphatic_index()
-    except AttributeError:
-        composition = analyzer.count_amino_acids()
-        total = float(sum(composition.values()) or 1)
-        a = composition.get('A', 0) / total
-        v = composition.get('V', 0) / total
-        i = composition.get('I', 0) / total
-        l = composition.get('L', 0) / total
-        aliphatic_index = 100 * (a + 2.9 * v + 3.9 * (i + l))
-
-    try:
-        secondary_structure = analyzer.secondary_structure_fraction()
-    except AttributeError:
-        secondary_structure = (0.0, 0.0, 0.0)
+    aliphatic_attr = getattr(analyzer, 'aliphatic_index', None)
+    if callable(aliphatic_attr):
+        aliphatic_index = aliphatic_attr()
+    else:
+        ala = sequence.count('A') / length * 100.0
+        val = sequence.count('V') / length * 100.0
+        ile = sequence.count('I') / length * 100.0
+        leu = sequence.count('L') / length * 100.0
+        aliphatic_index = ala + 2.9 * val + 3.9 * (ile + leu)
 
     developability = {
         'molecular_weight': analyzer.molecular_weight(),
         'theoretical_pi': analyzer.isoelectric_point(),
         'instability_index': analyzer.instability_index(),
         'aliphatic_index': aliphatic_index,
-        'gravy': analyzer.gravy(),  # Grand average of hydropathy
+        'gravy': analyzer.gravy(),
         'aromaticity': analyzer.aromaticity(),
-        'secondary_structure': secondary_structure
+        'secondary_structure': analyzer.secondary_structure_fraction(),
     }
-    
-    # Assess developability risk
+
     risks = []
-    
-    # Check pI (ideal range: 6.5-9.0)
     if developability['theoretical_pi'] < 6.5 or developability['theoretical_pi'] > 9.0:
         risks.append(f"pI outside optimal range: {developability['theoretical_pi']:.1f}")
-    
-    # Check instability (< 40 is stable)
     if developability['instability_index'] > 40:
         risks.append(f"High instability index: {developability['instability_index']:.1f}")
-    
-    # Check hydrophobicity (GRAVY should be negative for soluble proteins)
     if developability['gravy'] > 0:
         risks.append(f"Positive GRAVY score: {developability['gravy']:.2f}")
-    
-    # Check for aggregation-prone regions
+
     hydrophobic_aa = 'FWYLIMV'
-    max_hydrophobic_stretch = 0
-    current_stretch = 0
-    
+    max_stretch = 0
+    current = 0
     for aa in sequence:
         if aa in hydrophobic_aa:
-            current_stretch += 1
-            max_hydrophobic_stretch = max(max_hydrophobic_stretch, current_stretch)
+            current += 1
+            max_stretch = max(max_stretch, current)
         else:
-            current_stretch = 0
-    
-    if max_hydrophobic_stretch >= 5:
-        risks.append(f"Long hydrophobic stretch: {max_hydrophobic_stretch} aa")
-    
+            current = 0
+    if max_stretch >= 5:
+        risks.append(f"Long hydrophobic stretch: {max_stretch} aa")
+
     developability['risks'] = risks
-    developability['risk_level'] = 'high' if len(risks) >= 3 else 'medium' if len(risks) >= 1 else 'low'
-    
+    developability['risk_level'] = 'high' if len(risks) >= 3 else 'medium' if risks else 'low'
     return developability
 
-def predict_expression_level(nanobody):
-    """
-    Predict expression level in E. coli or yeast
-    """
-    
-    sequence = nanobody['sequence']
-    
-    # Factors affecting expression
-    factors = {
-        'rare_codons': 0,
-        'gc_content': 0,
-        'hydrophobicity': 0,
-        'size': len(sequence)
-    }
-    
-    # Check for rare amino acids
+
+def predict_expression_level(sequence: str) -> Dict[str, object]:
     rare_aa = 'WCM'
-    factors['rare_codons'] = sum(1 for aa in sequence if aa in rare_aa)
-    
-    # Estimate GC content impact (simplified)
     gc_favorable = 'GAPR'
-    factors['gc_content'] = sum(1 for aa in sequence if aa in gc_favorable) / len(sequence)
-    
-    # Hydrophobicity
     hydrophobic_aa = 'FWYLIMV'
-    factors['hydrophobicity'] = sum(1 for aa in sequence if aa in hydrophobic_aa) / len(sequence)
-    
-    # Calculate expression score
+
+    factors = {
+        'rare_codons': sum(1 for aa in sequence if aa in rare_aa),
+        'gc_content': sum(1 for aa in sequence if aa in gc_favorable) / len(sequence),
+        'hydrophobicity': sum(1 for aa in sequence if aa in hydrophobic_aa) / len(sequence),
+        'size': len(sequence),
+    }
+
     expression_score = 100
-    expression_score -= factors['rare_codons'] * 5
-    expression_score -= (factors['hydrophobicity'] - 0.3) * 50 if factors['hydrophobicity'] > 0.3 else 0
-    expression_score -= (factors['size'] - 120) * 0.5 if factors['size'] > 120 else 0
-    
-    expression_level = 'high' if expression_score > 80 else 'medium' if expression_score > 60 else 'low'
-    
+    expression_score -= factors['rare_codons'] * 1.5
+    expression_score -= factors['hydrophobicity'] * 40
+    expression_score -= max(0, factors['size'] - 120) * 0.2
+    expression_score = max(expression_score, 0)
+
+    level = 'high' if expression_score >= 70 else 'medium' if expression_score >= 45 else 'low'
+
     return {
-        'score': max(0, min(100, expression_score)),
-        'level': expression_level,
-        'factors': factors
+        'score': expression_score,
+        'level': level,
+        'factors': factors,
     }
 
-def calculate_production_metrics(nanobody):
-    """
-    Calculate metrics relevant for production
-    """
-    
-    sequence = nanobody['sequence']
-    
-    # Estimate yield (mg/L)
-    base_yield = 50  # Base yield for average nanobody
-    
-    # Adjust based on properties
-    analyzer = ProtParam.ProteinAnalysis(sequence)
-    
-    # Solubility impacts yield
-    if analyzer.gravy() < -0.4:  # Very hydrophilic
-        yield_factor = 1.5
-    elif analyzer.gravy() > 0:  # Hydrophobic
-        yield_factor = 0.5
-    else:
-        yield_factor = 1.0
-    
-    estimated_yield = base_yield * yield_factor
-    
-    # Purification ease
-    purification_score = 100
-    
-    # Check for His residues (interfere with His-tag purification)
-    his_count = sequence.count('H')
-    if his_count > 3:
-        purification_score -= 20
-    
-    # Check for Cys (disulfide bond complications)
-    cys_count = sequence.count('C')
-    if cys_count != 2:  # Should have exactly 2 for canonical disulfide
-        purification_score -= 30
-    
-    return {
-        'estimated_yield_mg_per_l': round(estimated_yield, 1),
-        'purification_score': max(0, purification_score),
-        'production_cost': 'low' if estimated_yield > 75 and purification_score > 80 else 'medium' if estimated_yield > 40 else 'high'
-    }
 
-def rank_nanobodies(nanobodies_with_analysis):
-    """
-    Rank nanobodies based on comprehensive scoring
-    """
-    
-    for nb in nanobodies_with_analysis:
-        # Calculate composite score
-        score = 0
-        
-        # Original design quality (40% weight)
-        score += nb['original_scores'].get('iptm', 0.5) * 40
-        
-        # Developability (30% weight)
-        dev_score = 30
-        if nb['developability']['risk_level'] == 'medium':
-            dev_score = 20
-        elif nb['developability']['risk_level'] == 'high':
-            dev_score = 10
-        score += dev_score
-        
-        # Expression (15% weight)
-        expr_score = nb['expression']['score'] / 100 * 15
-        score += expr_score
-        
-        # Specificity (15% weight)
-        spec_score = 15 if nb['ptn_specificity']['risk'] == 'low' else 10 if nb['ptn_specificity']['risk'] == 'medium' else 5
-        score += spec_score
-        
+def calculate_production_metrics(nanobody: Dict[str, object]) -> Dict[str, object]:
+    mw = nanobody['properties']['molecular_weight_kda']
+    production = {
+        'estimated_yield_mg_per_l': 50.0,
+        'purification_score': 100 if mw <= 12 else 70,
+        'production_cost': 'medium'
+    }
+    return production
+
+
+def rank_nanobodies(candidates: List[Dict[str, object]]) -> List[Dict[str, object]]:
+    for nb in candidates:
+        score = 0.0
+        score += nb['original_scores'].get('iptm', 0.5) * 30
+        score += nb['competition']['lrp1_occlusion'] * 25
+        score += nb['competition']['integrin_occlusion'] * 15
+
+        dev_level = nb['developability']['risk_level']
+        score += 15 if dev_level == 'low' else 10 if dev_level == 'medium' else 5
+
+        score += (nb['expression']['score'] / 100) * 10
+
+        specificity = nb['ptn_specificity']['risk']
+        score += 5 if specificity == 'low' else 3 if specificity == 'medium' else 1
+
         nb['final_score'] = round(score, 2)
-    
-    # Sort by final score
-    nanobodies_with_analysis.sort(key=lambda x: x['final_score'], reverse=True)
-    
-    return nanobodies_with_analysis
 
-def generate_visualization(nanobodies_with_analysis, output_dir):
-    """
-    Generate visualization plots for the analysis
-    """
-    
-    output_dir = Path(output_dir)
+    candidates.sort(key=lambda x: x['final_score'], reverse=True)
+    return candidates
+
+
+def generate_visualization(candidates: List[Dict[str, object]], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Prepare data for plotting
     data = []
-    for nb in nanobodies_with_analysis:
-        data.append({
-            'ID': nb['id'].replace('nb_design_', 'NB'),
-            'Final Score': nb['final_score'],
-            'pI': nb['developability']['theoretical_pi'],
-            'Instability': nb['developability']['instability_index'],
-            'Expression': nb['expression']['score'],
-            'MW (kDa)': nb['developability']['molecular_weight'] / 1000
-        })
-    
+    for nb in candidates:
+        data.append(
+            {
+                'ID': nb['id'].replace('nb_design_', 'NB'),
+                'Final Score': nb['final_score'],
+                'pI': nb['developability']['theoretical_pi'],
+                'Instability': nb['developability']['instability_index'],
+                'Expression': nb['expression']['score'],
+                'MW (kDa)': nb['developability']['molecular_weight'] / 1000,
+                'LRP1 occlusion': nb['competition']['lrp1_occlusion'],
+                'Integrin occlusion': nb['competition']['integrin_occlusion'],
+            }
+        )
+
     df = pd.DataFrame(data)
-    
-    # Create figure with subplots
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    
-    # 1. Final scores
-    ax1 = axes[0, 0]
+
     df_sorted = df.sort_values('Final Score', ascending=True)
-    ax1.barh(df_sorted['ID'], df_sorted['Final Score'])
-    ax1.set_xlabel('Final Score')
-    ax1.set_title('Nanobody Ranking')
-    ax1.grid(axis='x', alpha=0.3)
-    
-    # 2. pI distribution
-    ax2 = axes[0, 1]
-    ax2.scatter(df['pI'], df['Instability'])
-    ax2.axvline(x=6.5, color='r', linestyle='--', alpha=0.5, label='pI range')
-    ax2.axvline(x=9.0, color='r', linestyle='--', alpha=0.5)
-    ax2.axhline(y=40, color='r', linestyle='--', alpha=0.5, label='Stability threshold')
-    ax2.set_xlabel('Theoretical pI')
-    ax2.set_ylabel('Instability Index')
-    ax2.set_title('Developability Metrics')
-    ax2.legend()
-    ax2.grid(alpha=0.3)
-    
-    # 3. Expression vs MW
-    ax3 = axes[1, 0]
-    scatter = ax3.scatter(df['MW (kDa)'], df['Expression'], c=df['Final Score'], cmap='viridis')
-    plt.colorbar(scatter, ax=ax3, label='Final Score')
-    ax3.set_xlabel('Molecular Weight (kDa)')
-    ax3.set_ylabel('Expression Score')
-    ax3.set_title('Expression Prediction')
-    ax3.grid(alpha=0.3)
-    
-    # 4. Score components
-    ax4 = axes[1, 1]
-    components = ['Binding', 'Developability', 'Expression', 'Specificity']
-    top_nb = nanobodies_with_analysis[0]
+    axes[0, 0].barh(df_sorted['ID'], df_sorted['Final Score'])
+    axes[0, 0].set_xlabel('Final Score')
+    axes[0, 0].set_title('Nanobody Ranking')
+
+    axes[0, 1].scatter(df['LRP1 occlusion'], df['Integrin occlusion'], c=df['Final Score'], cmap='viridis')
+    axes[0, 1].axvline(0.7, color='r', linestyle='--', alpha=0.4)
+    axes[0, 1].axhline(0.5, color='r', linestyle='--', alpha=0.4)
+    axes[0, 1].set_xlabel('LRP1 occlusion')
+    axes[0, 1].set_ylabel('Integrin occlusion')
+    axes[0, 1].set_title('Competition coverage')
+
+    scatter = axes[1, 0].scatter(df['MW (kDa)'], df['Expression'], c=df['Final Score'], cmap='plasma')
+    plt.colorbar(scatter, ax=axes[1, 0], label='Final Score')
+    axes[1, 0].set_xlabel('Molecular Weight (kDa)')
+    axes[1, 0].set_ylabel('Expression score')
+    axes[1, 0].set_title('Expression prediction')
+
+    top_nb = candidates[0]
+    components = ['Binding', 'LRP1 occ', 'Integrin occ', 'Developability', 'Expression', 'Specificity']
     values = [
         top_nb['original_scores'].get('iptm', 0.5) * 100,
+        top_nb['competition']['lrp1_occlusion'] * 100,
+        top_nb['competition']['integrin_occlusion'] * 100,
         100 if top_nb['developability']['risk_level'] == 'low' else 66 if top_nb['developability']['risk_level'] == 'medium' else 33,
         top_nb['expression']['score'],
-        100 if top_nb['ptn_specificity']['risk'] == 'low' else 66 if top_nb['ptn_specificity']['risk'] == 'medium' else 33
+        100 if top_nb['ptn_specificity']['risk'] == 'low' else 66 if top_nb['ptn_specificity']['risk'] == 'medium' else 33,
     ]
-    ax4.bar(components, values)
-    ax4.set_ylabel('Score (%)')
-    ax4.set_title(f'Top Candidate ({top_nb["id"]}) Breakdown')
-    ax4.set_ylim(0, 100)
-    ax4.grid(axis='y', alpha=0.3)
-    
+    axes[1, 1].bar(components, values)
+    axes[1, 1].set_ylabel('Score (%)')
+    axes[1, 1].set_title(f"Top candidate breakdown ({top_nb['id']})")
+    axes[1, 1].set_ylim(0, 100)
+
     plt.tight_layout()
-    
-    # Save figure
-    plot_file = output_dir / "analysis_plots.png"
-    plt.savefig(plot_file, dpi=300, bbox_inches='tight')
-    print(f"\n  Saved plots to: {plot_file}")
-    
-    plt.close()
+    fig.savefig(output_dir / "analysis_plots.png", dpi=200)
+    plt.close(fig)
 
-def generate_final_report(nanobodies_with_analysis, output_file):
-    """
-    Generate comprehensive final report
-    """
-    
-    with open(output_file, 'w') as f:
-        f.write("=" * 80 + "\n")
-        f.write("MDK-LRP1 NANOBODY DESIGN - FINAL VALIDATION REPORT\n")
-        f.write("=" * 80 + "\n\n")
-        
-        f.write("EXECUTIVE SUMMARY\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Total designs analyzed: {len(nanobodies_with_analysis)}\n")
-        
-        # Count risk levels
-        low_risk = sum(1 for nb in nanobodies_with_analysis if nb['developability']['risk_level'] == 'low')
-        med_risk = sum(1 for nb in nanobodies_with_analysis if nb['developability']['risk_level'] == 'medium')
-        high_risk = sum(1 for nb in nanobodies_with_analysis if nb['developability']['risk_level'] == 'high')
-        
-        f.write(f"Developability: {low_risk} low risk, {med_risk} medium risk, {high_risk} high risk\n")
-        
-        high_expr = sum(1 for nb in nanobodies_with_analysis if nb['expression']['level'] == 'high')
-        f.write(f"High expression predicted: {high_expr}/{len(nanobodies_with_analysis)}\n\n")
-        
-        # Top candidates
-        f.write("TOP 3 CANDIDATES FOR EXPERIMENTAL VALIDATION\n")
-        f.write("-" * 40 + "\n\n")
-        
-        for i, nb in enumerate(nanobodies_with_analysis[:3], 1):
-            f.write(f"{i}. {nb['id']} (Score: {nb['final_score']})\n")
-            f.write(f"   Binding Score (ipTM): {nb['original_scores'].get('iptm', 'N/A')}\n")
-            f.write(f"   MW: {nb['developability']['molecular_weight']/1000:.1f} kDa\n")
-            f.write(f"   pI: {nb['developability']['theoretical_pi']:.1f}\n")
-            f.write(f"   Instability: {nb['developability']['instability_index']:.1f}\n")
-            f.write(f"   Expression: {nb['expression']['level']}\n")
-            f.write(f"   PTN cross-reactivity risk: {nb['ptn_specificity']['risk']}\n")
-            f.write(f"   Estimated yield: {nb['production']['estimated_yield_mg_per_l']} mg/L\n")
-            
-            if nb['developability']['risks']:
-                f.write(f"   Risks: {', '.join(nb['developability']['risks'])}\n")
-            else:
-                f.write(f"   Risks: None identified\n")
-            
-            f.write(f"   CDR3: {nb['cdrs']['CDR3']}\n")
-            f.write("\n")
-        
-        # Detailed analysis
-        f.write("\nDETAILED ANALYSIS\n")
-        f.write("-" * 40 + "\n\n")
-        
-        for nb in nanobodies_with_analysis:
-            f.write(f"{nb['id']}:\n")
-            f.write(f"  Final Score: {nb['final_score']}\n")
-            f.write(f"  Sequence Length: {len(nb['sequence'])} aa\n")
-            f.write(f"  Properties:\n")
-            f.write(f"    - Molecular Weight: {nb['developability']['molecular_weight']:.0f} Da\n")
-            f.write(f"    - Theoretical pI: {nb['developability']['theoretical_pi']:.2f}\n")
-            f.write(f"    - Instability Index: {nb['developability']['instability_index']:.2f}\n")
-            f.write(f"    - Aliphatic Index: {nb['developability']['aliphatic_index']:.2f}\n")
-            f.write(f"    - GRAVY: {nb['developability']['gravy']:.3f}\n")
-            f.write(f"    - Aromaticity: {nb['developability']['aromaticity']:.3f}\n")
-            f.write(f"  Expression Prediction:\n")
-            f.write(f"    - Score: {nb['expression']['score']:.1f}\n")
-            f.write(f"    - Level: {nb['expression']['level']}\n")
-            f.write(f"  Production Metrics:\n")
-            f.write(f"    - Estimated Yield: {nb['production']['estimated_yield_mg_per_l']} mg/L\n")
-            f.write(f"    - Purification Score: {nb['production']['purification_score']}\n")
-            f.write(f"    - Production Cost: {nb['production']['production_cost']}\n")
-            f.write("\n")
-        
-        # Recommendations
-        f.write("\nRECOMMENDATIONS FOR EXPERIMENTAL VALIDATION\n")
-        f.write("-" * 40 + "\n\n")
-        
-        f.write("1. Expression System:\n")
-        f.write("   - Primary: E. coli BL21(DE3) with pET vector system\n")
-        f.write("   - Alternative: Pichia pastoris for difficult-to-express candidates\n\n")
-        
-        f.write("2. Purification Strategy:\n")
-        f.write("   - His-tag purification followed by size exclusion\n")
-        f.write("   - Consider Protein A purification for Fc-fusion formats\n\n")
-        
-        f.write("3. Binding Validation:\n")
-        f.write("   - SPR with immobilized MDK (focus on C-terminal domain)\n")
-        f.write("   - Competition assay with LRP1 receptor fragments\n")
-        f.write("   - Cell-based assays using LRP1-expressing cells\n\n")
-        
-        f.write("4. Specificity Testing:\n")
-        f.write("   - Cross-reactivity with PTN (pleiotrophin)\n")
-        f.write("   - Binding to other heparin-binding proteins\n")
-        f.write("   - Species cross-reactivity (human, mouse, rat MDK)\n\n")
-        
-        f.write("5. Functional Assays:\n")
-        f.write("   - MDK-LRP1 signaling inhibition\n")
-        f.write("   - Cell migration/invasion assays\n")
-        f.write("   - Downstream pathway analysis (AKT, ERK)\n\n")
-    
-    print(f"  Generated final report: {output_file}")
 
-def main():
-    """Main analysis pipeline"""
-    
+def generate_final_report(candidates: List[Dict[str, object]], rejects: List[Dict[str, object]], output_file: Path, passed_gate_count: Optional[int] = None) -> None:
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with output_file.open('w', encoding='utf-8') as handle:
+        handle.write("=" * 80 + "\n")
+        handle.write("MDK-LRP1/Integrin Nanobody Validation Report\n")
+        handle.write("=" * 80 + "\n\n")
+        passed = passed_gate_count if passed_gate_count is not None else len(candidates)
+        handle.write(f"Total designs passing competition gate: {passed}\n")
+        handle.write(f"Rejected for competition shortfall: {len(rejects)}\n\n")
+        if passed_gate_count is not None and passed_gate_count == 0:
+            handle.write("NOTE: All candidates failed occlusion gate; ranking presented for diagnostics.\n\n")
+
+        handle.write("TOP CANDIDATES\n")
+        handle.write("-" * 40 + "\n")
+        for idx, nb in enumerate(candidates[:3], start=1):
+            handle.write(f"{idx}. {nb['id']} (Score: {nb['final_score']})\n")
+            handle.write(f"   Binding ipTM: {nb['original_scores'].get('iptm', 'N/A'):.3f}\n")
+            handle.write(f"   LRP1 occlusion: {nb['competition']['lrp1_occlusion']:.2f}\n")
+            handle.write(f"   Integrin occlusion: {nb['competition']['integrin_occlusion']:.2f}\n")
+            handle.write(f"   MW: {nb['developability']['molecular_weight']/1000:.1f} kDa\n")
+            handle.write(f"   pI: {nb['developability']['theoretical_pi']:.1f}\n")
+            handle.write(f"   Risks: {', '.join(nb['developability']['risks']) if nb['developability']['risks'] else 'none'}\n\n")
+
+        if rejects:
+            handle.write("DESIGNS REJECTED ON COMPETITION GATE\n")
+            handle.write("-" * 40 + "\n")
+            for nb in rejects:
+                handle.write(
+                    f"{nb['id']}: LRP1 occ {nb['competition']['lrp1_occlusion']:.2f}, "
+                    f"Integrin occ {nb['competition']['integrin_occlusion']:.2f} -> {nb['competition']['reject_reason']}\n"
+                )
+            handle.write("\n")
+
+        handle.write("DETAILED SUMMARIES\n")
+        handle.write("-" * 40 + "\n")
+        for nb in candidates:
+            handle.write(f"{nb['id']}\n")
+            handle.write(f"  Final score: {nb['final_score']}\n")
+            handle.write(f"  Sequence length: {len(nb['sequence'])} aa\n")
+            handle.write(f"  LRP1 occlusion: {nb['competition']['lrp1_occlusion']:.2f}\n")
+            handle.write(f"  Integrin occlusion: {nb['competition']['integrin_occlusion']:.2f}\n")
+            handle.write(f"  Developability risk: {nb['developability']['risk_level']}\n")
+            handle.write(f"  Expression: {nb['expression']['level']} ({nb['expression']['score']:.1f})\n")
+            handle.write(f"  PTN specificity risk: {nb['ptn_specificity']['risk']}\n")
+            if nb['competition'].get('per_residue'):
+                handle.write(f"  Occluded residues: {sorted(nb['competition']['per_residue'].keys())}\n")
+            handle.write("\n")
+
+
+def main() -> None:
+    args = parse_args()
+    config = load_config(args.config)
+    paths = configure_paths(config, args.campaign)
+
     print("=" * 60)
-    print("Final Analysis and Validation")
+    print(f"Final Analysis for campaign: {paths.campaign}")
     print("=" * 60)
-    
-    # Load configuration
-    config = load_config()
-    
-    # Load nanobodies
-    print("\n1. Loading nanobody designs...")
-    nanobody_dir = Path(config['output']['base_dir']) / "nanobodies"
-    
-    if not nanobody_dir.exists():
-        print(f"Error: Nanobody directory {nanobody_dir} not found!")
-        print("Please run 05_convert_to_nanobody.py first")
-        return
-    
-    nanobodies = load_nanobodies(nanobody_dir)
-    print(f"  Loaded {len(nanobodies)} nanobodies")
-    
-    # Comprehensive analysis
-    print("\n2. Running comprehensive analysis...")
-    
-    nanobodies_with_analysis = []
-    
+
+    nanobodies = load_nanobodies(paths.nanobodies_dir)
+    print(f"Loaded {len(nanobodies)} nanobodies")
+
+    run_dir = resolve_run_directory(paths, args.run_dir)
+    print(f"Using BindCraft run directory: {run_dir}")
+
+    footprints_dir = Path(args.footprints_dir)
+    lrp1_footprint = load_footprint(footprints_dir, "lrp1_mdkc.json")
+    integrin_footprint = load_footprint(footprints_dir, "integrin_b1_headpiece_mdkc.json")
+
+    lrp1_gate = 0.70
+    integrin_gate = 0.50
+
+    eligible: List[Dict[str, object]] = []
+    rejected: List[Dict[str, object]] = []
+
+    target_chain = config['target'].get('chain', 'A').strip() or 'A'
+    reference_pdb = Path(config['target']['pdb_file']).resolve()
+    reference_numbers = load_reference_residue_numbers(reference_pdb, target_chain)
+
     for nb in nanobodies:
-        print(f"  Analyzing {nb['id']}...")
-        
-        # Add analyses
+        design_id = nb.get('original_design') or nb['id'].replace('nb_', '')
+        pdb_path = find_design_pdb(run_dir, design_id)
+        competition = {
+            'lrp1_occlusion': 0.0,
+            'integrin_occlusion': 0.0,
+            'per_residue': {},
+        }
+
+        if pdb_path and pdb_path.exists():
+            try:
+                residue_map = build_residue_number_map(pdb_path, target_chain, reference_numbers)
+                lrp1_occ, lrp1_res = compute_occlusion(pdb_path, target_chain, lrp1_footprint, residue_map=residue_map)
+                integrin_occ, integrin_res = compute_occlusion(pdb_path, target_chain, integrin_footprint, residue_map=residue_map)
+                competition['lrp1_occlusion'] = lrp1_occ
+                competition['integrin_occlusion'] = integrin_occ
+                competition['per_residue'] = {**lrp1_res, **integrin_res}
+            except Exception as exc:  # pragma: no cover
+                print(f"Warning: failed occlusion analysis for {design_id}: {exc}")
+        else:
+            print(f"Warning: PDB for {design_id} not found; occlusion set to 0")
+
+        nb['competition'] = competition
         nb['ptn_specificity'] = check_ptn_cross_reactivity(nb['sequence'])
-        nb['developability'] = analyze_developability(nb)
-        nb['expression'] = predict_expression_level(nb)
+        nb['developability'] = analyze_developability(nb['sequence'])
+        nb['expression'] = predict_expression_level(nb['sequence'])
         nb['production'] = calculate_production_metrics(nb)
-        
-        nanobodies_with_analysis.append(nb)
-    
-    # Rank nanobodies
-    print("\n3. Ranking nanobodies...")
-    ranked_nanobodies = rank_nanobodies(nanobodies_with_analysis)
-    
-    # Generate visualizations
-    print("\n4. Generating visualizations...")
-    vis_dir = Path(config['output']['base_dir']) / "validation"
-    generate_visualization(ranked_nanobodies, vis_dir)
-    
-    # Generate final report
-    print("\n5. Generating final report...")
-    report_file = vis_dir / "final_validation_report.txt"
-    generate_final_report(ranked_nanobodies, report_file)
-    
-    # Save ranked data
-    ranked_data_file = vis_dir / "ranked_nanobodies.json"
-    with open(ranked_data_file, 'w') as f:
-        # Prepare for JSON serialization
-        json_data = []
-        for nb in ranked_nanobodies:
-            json_data.append({
-                'id': nb['id'],
-                'final_score': nb['final_score'],
-                'sequence': nb['sequence'],
-                'developability_risk': nb['developability']['risk_level'],
-                'expression_level': nb['expression']['level'],
-                'production_cost': nb['production']['production_cost']
-            })
-        json.dump(json_data, f, indent=2)
-    
-    print(f"  Saved ranked data to: {ranked_data_file}")
-    
-    print("\n" + "=" * 60)
-    print("Analysis Complete!")
-    print("=" * 60)
-    
-    # Summary
-    print("\nTop 3 candidates for experimental validation:")
-    for i, nb in enumerate(ranked_nanobodies[:3], 1):
-        print(f"\n{i}. {nb['id']}")
-        print(f"   Final score: {nb['final_score']}")
-        print(f"   Risk level: {nb['developability']['risk_level']}")
-        print(f"   Expression: {nb['expression']['level']}")
-        print(f"   Estimated yield: {nb['production']['estimated_yield_mg_per_l']} mg/L")
-    
-    print(f"\nFull report available at: {report_file}")
-    print("\nReady for experimental validation!")
+
+        passes_lrp1 = competition['lrp1_occlusion'] >= lrp1_gate
+        passes_integrin = competition['integrin_occlusion'] >= integrin_gate
+        if passes_lrp1 and passes_integrin:
+            eligible.append(nb)
+        else:
+            reason = []
+            if not passes_lrp1:
+                reason.append(f"LRP1<{lrp1_gate}")
+            if not passes_integrin:
+                reason.append(f"Integrin<{integrin_gate}")
+            competition['reject_reason'] = ",".join(reason)
+            rejected.append(nb)
+
+    passed_gate_count = len(eligible)
+    ranking_pool = eligible if eligible else nanobodies
+    if not eligible:
+        print("Warning: no nanobodies passed occlusion gates; ranking full set for diagnostics.")
+
+    ranked_nanobodies = rank_nanobodies(ranking_pool)
+
+    paths.validation_dir.mkdir(parents=True, exist_ok=True)
+    generate_visualization(ranked_nanobodies, paths.validation_dir)
+
+    report_file = paths.validation_dir / "final_validation_report.txt"
+    generate_final_report(ranked_nanobodies, rejected, report_file, passed_gate_count=passed_gate_count)
+
+    ranked_data_file = paths.validation_dir / "ranked_nanobodies.json"
+    with ranked_data_file.open("w", encoding="utf-8") as handle:
+        json.dump(
+            [
+                {
+                    'id': nb['id'],
+                    'final_score': nb['final_score'],
+                    'sequence': nb['sequence'],
+                    'developability_risk': nb['developability']['risk_level'],
+                    'expression_level': nb['expression']['level'],
+                    'production_cost': nb['production']['production_cost'],
+                    'lrp1_occlusion': nb['competition']['lrp1_occlusion'],
+                    'integrin_occlusion': nb['competition']['integrin_occlusion'],
+                }
+                for nb in ranked_nanobodies
+            ],
+            handle,
+            indent=2,
+        )
+
+    print("\nAnalysis complete.")
+    print(f"Top candidate: {ranked_nanobodies[0]['id']} (score {ranked_nanobodies[0]['final_score']})")
+    print(f"Report: {report_file}")
+    if rejected:
+        print(f"Rejected designs due to occlusion gate: {len(rejected)}")
+
 
 if __name__ == "__main__":
     main()
